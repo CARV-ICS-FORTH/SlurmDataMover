@@ -20,7 +20,7 @@ The peer reciever resposible to connects to other peers servers and give command
 
 
 ## Compilation
-Go to the src/Client/build folder and run
+Go to the src/Client/build folder and run.
 `cmake ..`
 `make all` to compile
 `make clean` to clean

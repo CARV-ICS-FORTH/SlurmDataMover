@@ -10,9 +10,13 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_compile_options(-fpermissive)
 message(${CMAKE_BINARY_DIR})
 
-add_library(client SHARED PeerClient.cpp  getData.cpp)
+aux_source_directory(client CLIENT_SRC)
+aux_source_directory(server SERVER_SRC)
+add_library(p2p SHARED ${CLIENT_SRC} ${SERVER_SRC})
+target_include_directories(p2p PUBLIC client server)
 
-#add_executable(get P2Pmain.cpp)   
-             
+
+#add_executable(get P2Pmain.cpp)
+
 #target_link_libraries(get client)
 

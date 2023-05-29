@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.26)
+
+project(sdm)
+
+#set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+# set(CMAKE_UNITY_BUILD FALSE)
+
+find_package(Poco QUIET REQUIRED Net Util)
+
+aux_source_directory(src SRC_FILES)
+add_executable(sdm ${SRC_FILES})
+target_link_libraries(sdm Poco::Util Poco::Net p2p)
+
+file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp)
+add_custom_target(format COMMAND clang-format -i ${FMT_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+
+add_subdirectory(PeerToPeer)
