@@ -4,7 +4,7 @@ A Library that manage data dependencies between jobs on a Workflow. This library
 
 # Requirements
 
-Arax requires the following packages:
+SDM requires the following packages:
 
 - cmake
 - make
