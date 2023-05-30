@@ -1,5 +1,6 @@
 #include "ClientOps.h"
 #include "NodeServer.h"
+#include "Poco/Environment.h"
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/SocketStream.h"
 #include "Poco/Net/TCPServer.h"
@@ -51,13 +52,15 @@ class Sdm : public ServerApplication {
     }
 
     std::cerr << std::endl;
-    std::cerr << "(*): Get,Put,Node can be used more than once." << std::endl;
+    std::cerr << "(*): Get,Put,Node,Ip can be used more than once."
+              << std::endl;
 
     exit(0);
   }
 
   void addFile(const std::string &name, const std::string &value) {
     std::cerr << __func__ << std::endl;
+    flags.insert(name);
     if (name == "get") {
       get_files.push_back(value);
       return;
@@ -107,7 +110,7 @@ class Sdm : public ServerApplication {
                           .argument("ip")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addNode)));
-    options.addOption(Option("ip", "i", "Register this node to ip")
+    options.addOption(Option("ip", "i", "This node has this ip(*)")
                           .argument("ip")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addIp)));
@@ -144,6 +147,40 @@ class Sdm : public ServerApplication {
 
       data_server =
           StartTheServer(Node::getHostname(), std::to_string(data_port));
+
+      if (Environment::has("SLURM_JOB_NODELIST")) {
+        std::string node_env = Environment::get("SLURM_JOB_NODELIST");
+        node_env = node_env.substr(0, node_env.find_first_of(","));
+        std::string head;
+        bool after_cage = false;
+        for (auto c : node_env)
+          switch (c) {
+          case '[':
+            after_cage = true;
+            break;
+          case '-':
+            if (after_cage)
+              goto done;
+          default:
+            head += c;
+          }
+
+      done:
+
+        logger().information("[Node ] Node from enviroment %s", head);
+        nodes.insert(head);
+      }
+
+      if (nodes.size()) {
+        for (auto node : nodes) {
+          join_node(self, node, cmd_port);
+        }
+      }
+    } else {
+      if (nodes.size()) {
+        help("", "");
+        return Application::EXIT_USAGE;
+      }
     }
 
     if (wui_port) {
@@ -151,12 +188,6 @@ class Sdm : public ServerApplication {
       http->start();
       servers["WebUI"] = http;
       logger().information("[WebUI] Starting on port %hu", wui_port);
-    }
-
-    if (nodes.size()) {
-      for (auto node : nodes) {
-        join_node(self, node, cmd_port);
-      }
     }
 
     if (put_files.size() || get_files.size()) {
@@ -186,6 +217,11 @@ class Sdm : public ServerApplication {
     if (data_server) {
       data_server->join();
       delete data_server;
+    }
+
+    if (flags.size() == 0) {
+      help("", "");
+      return Application::EXIT_USAGE;
     }
 
     return Application::EXIT_OK;
