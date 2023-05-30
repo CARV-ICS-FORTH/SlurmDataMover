@@ -10,7 +10,6 @@ using Poco::Net::HostEntry;
 Node ::Node(const std::string name) : name(name), addresses() {}
 
 void Node ::resolve() {
-  return;
   const HostEntry &entry = DNS::thisHost();
 
   const auto &addrs = entry.addresses();
