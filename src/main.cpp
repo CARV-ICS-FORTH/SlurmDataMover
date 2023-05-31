@@ -10,6 +10,7 @@
 #include "startServer.h"
 #include <iomanip>
 #include <iostream>
+#include <unordered_map>
 
 using namespace Poco;
 using namespace Poco::Net;
@@ -45,11 +46,14 @@ class Sdm : public ServerApplication {
       std::string sparam =
           (op.takesArgument()) ? ("<" + op.argumentName() + ">") : "";
       std::string lparam = (sparam != "") ? ("=" + sparam) : "";
-      std::cerr << "  -" << std::setw(10) << std::left
+      std::cerr << "  -" << std::setw(15) << std::left
                 << (op.shortName() + sparam);
-      std::cerr << "--" << std::setw(15) << (op.fullName() + lparam);
+      std::cerr << "--" << std::setw(20) << (op.fullName() + lparam);
       std::cerr << op.description() << std::endl;
     }
+
+    std::cerr << std::endl;
+    std::cerr << "You must pass atleast one of Get,Put or Serve.";
 
     std::cerr << std::endl;
     std::cerr << "(*): Get,Put,Node,Ip can be used more than once."
@@ -75,6 +79,13 @@ class Sdm : public ServerApplication {
     nodes.insert(node);
   }
 
+  void addMount(const std::string &name, const std::string &mount) {
+    std::string mname = mount.substr(0, mount.find_first_of('@'));
+    std::string mpath = mount.substr(name.size());
+    Node::getLocalhostNode()->mounts[mname] = mpath;
+    logger().information("[Node ] Added mount '%s' at '%s'", mname, mpath);
+  }
+
   void setFlag(const std::string &name, const std::string &value) {
     flags.insert(name);
   }
@@ -93,9 +104,6 @@ class Sdm : public ServerApplication {
     options.addOption(Option("wui", "w", "Webui Port")
                           .argument("port", false)
                           .binding("wui_port"));
-    options.addOption(
-        Option("job_id", "j", "Job id ").argument("id").binding("jid"));
-
     options.addOption(Option("get", "g", "Get file(*)")
                           .argument("file")
                           .repeatable(true)
@@ -114,6 +122,11 @@ class Sdm : public ServerApplication {
                           .argument("ip")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addIp)));
+
+    options.addOption(Option("mount", "m", "Add mount to this node")
+                          .argument("name@path")
+                          .repeatable(true)
+                          .callback(OptionCallback<Sdm>(this, &Sdm::addMount)));
 
     options.addOption(Option("help", "h", "Print Help")
                           .callback(OptionCallback<Sdm>(this, &Sdm::help)));
