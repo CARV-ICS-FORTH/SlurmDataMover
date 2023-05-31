@@ -11,12 +11,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(Poco QUIET REQUIRED Net Util)
 
+file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp PeerToPeer/*.h PeerToPeer/*.cpp)
+add_custom_target(format ALL COMMAND clang-format -i ${FMT_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
 aux_source_directory(src SRC_FILES)
 add_executable(sdm ${SRC_FILES})
 target_link_libraries(sdm Poco::Util Poco::Net p2p)
-
-file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp PeerToPeer/*.h PeerToPeer/*.cpp)
-add_custom_target(format COMMAND clang-format -i ${FMT_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
 
 add_subdirectory(PeerToPeer)
