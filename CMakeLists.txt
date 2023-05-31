@@ -15,7 +15,7 @@ aux_source_directory(src SRC_FILES)
 add_executable(sdm ${SRC_FILES})
 target_link_libraries(sdm Poco::Util Poco::Net p2p)
 
-file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp)
+file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp PeerToPeer/*.h PeerToPeer/*.cpp)
 add_custom_target(format COMMAND clang-format -i ${FMT_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 
