@@ -58,9 +58,17 @@ const Node *Node ::getFromIp(std::string ip) {
 void Node ::toHTML(std::ostream &os) const {
   Tag row(os, "tr");
   { Tag row(os, "td", name); }
-  Tag row2(os, "td");
-  for (auto &addr : addresses)
-    os << Tag::indent() << addr.toString() << "<br>" << std::endl;
+  {
+    Tag row2(os, "td");
+    for (auto &mount : mounts)
+      os << Tag::indent() << mount.first << " : " << mount.second << "<br>"
+         << std::endl;
+  }
+  {
+    Tag row2(os, "td");
+    for (auto &addr : addresses)
+      os << Tag::indent() << addr.toString() << "<br>" << std::endl;
+  }
 }
 
 Node ::Nodes Node ::nodes;

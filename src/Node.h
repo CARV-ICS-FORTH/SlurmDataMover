@@ -14,6 +14,7 @@ struct Node {
   typedef std::set<Node> SortedNodes;
   std::string name;
   std::vector<Poco::Net::IPAddress> addresses;
+  std::unordered_map<std::string, std::string> mounts;
 
   Poco::Net::IPAddress getIpAddress() const;
 
