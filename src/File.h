@@ -10,6 +10,7 @@
 struct File {
   std::unordered_set<std::string> nodes;
   std::string file_name;
+  std::string location;
   size_t size;
   File(const std::string &file_name);
   void toHTML(std::ostream &os) const;

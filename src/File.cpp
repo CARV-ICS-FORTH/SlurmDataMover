@@ -5,6 +5,7 @@ File ::File(const std::string &file_name) : file_name(file_name), size(0) {
 }
 void File ::toHTML(std::ostream &os) const {
   os << "<tr><td>" << file_name << "</td>\n";
+  os << "<td>" << location << "</td>\n";
   os << "<td>" << size << "</td>\n";
   os << "<td>";
   for (auto node : nodes) {
@@ -24,6 +25,7 @@ bool operator==(const File &lhs, const File &rhs) {
 Poco::Net::StreamSocket &operator<<(Poco::Net::StreamSocket &sock,
                                     const File &file) {
   sdm_pack(sock, file.file_name);
+  sdm_pack(sock, file.location);
   sdm_pack_size(sock, file.nodes.size());
   for (auto &node : file.nodes)
     sdm_pack(sock, node);
@@ -31,6 +33,7 @@ Poco::Net::StreamSocket &operator<<(Poco::Net::StreamSocket &sock,
 }
 Poco::Net::StreamSocket &operator>>(Poco::Net::StreamSocket &sock, File &file) {
   file.file_name = sdm_unpack(sock);
+  file.location = sdm_unpack(sock);
   size_t nodes = sdm_unpack_size(sock);
   file.nodes.clear();
   file.nodes.reserve(nodes);
