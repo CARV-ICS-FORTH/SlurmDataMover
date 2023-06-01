@@ -4,12 +4,16 @@ project(sdm)
 
 set(CMAKE_CXX_STANDARD 11)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 #set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 # set(CMAKE_UNITY_BUILD FALSE)
 
-find_package(Poco QUIET REQUIRED Net Util)
+find_package(Poco QUIET COMPONENTS Net Util)
+
+if(NOT Poco_FOUND)
+	message(INFO "Poco secondary autodetection.")
+	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+	find_package(Poco QUIET REQUIRED COMPONENTS Net Util)
+endif()
 
 file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp PeerToPeer/*.h PeerToPeer/*.cpp)
 add_custom_target(format ALL COMMAND clang-format -i ${FMT_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
