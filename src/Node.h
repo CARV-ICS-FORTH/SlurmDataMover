@@ -21,18 +21,17 @@ struct Node {
   void toHTML(std::ostream &os) const;
 
   static std::string getHostname();
-  static Node *getLocalhostNode();
+  static Node &getLocalhostNode();
   static const Node *get(std::string hostname);
-  static bool addNode(const Node &node);
-  static const Nodes &getNodes();
-  static SortedNodes getNodesSorted();
 
-  static const Node *getFromIp(std::string ip);
+  static const Node getFromIp(std::string ip);
+
+  operator bool() const;
+
+  static const Node NotFound;
 
 private:
   void resolve();
-  static std::unordered_map<std::string, std::string> ip2hostname;
-  static Nodes nodes;
 };
 
 namespace std {

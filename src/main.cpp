@@ -5,12 +5,12 @@
 #include "Poco/Net/SocketStream.h"
 #include "Poco/Net/TCPServer.h"
 #include "Poco/Util/ServerApplication.h"
+#include "Redis.h"
 #include "Utils.h"
 #include "WebUi.h"
 #include "startServer.h"
 #include <iomanip>
 #include <iostream>
-#include <unordered_map>
 
 using namespace Poco;
 using namespace Poco::Net;
@@ -19,9 +19,8 @@ using namespace Poco::Util;
 class Sdm : public ServerApplication {
   std::vector<std::string> get_files;
   std::vector<std::string> put_files;
-  std::unordered_set<std::string> nodes;
   std::unordered_set<std::string> flags;
-  Node *self = Node::getLocalhostNode();
+  Node &localhost = Node::getLocalhostNode();
 
   void help(const std::string &name, const std::string &value) {
     std::cerr << "SDM - SLURM Data Manager" << std::endl;
@@ -75,14 +74,10 @@ class Sdm : public ServerApplication {
     }
   }
 
-  void addNode(const std::string &name, const std::string &node) {
-    nodes.insert(node);
-  }
-
   void addMount(const std::string &name, const std::string &mount) {
     std::string mname = mount.substr(0, mount.find_first_of('@'));
     std::string mpath = mount.substr(name.size());
-    Node::getLocalhostNode()->mounts[mname] = mpath;
+    localhost.mounts[mname] = mpath;
     logger().information("[Node ] Added mount '%s' at '%s'", mname, mpath);
   }
 
@@ -91,7 +86,7 @@ class Sdm : public ServerApplication {
   }
 
   void addIp(const std::string &name, const std::string &ip) {
-    self->addresses.emplace_back(ip);
+    localhost.addresses.emplace_back(ip);
   }
 
   void defineOptions(OptionSet &options) {
@@ -114,10 +109,6 @@ class Sdm : public ServerApplication {
                           .callback(OptionCallback<Sdm>(this, &Sdm::addFile)));
     options.addOption(Option("serve", "s", "Start Node server")
                           .callback(OptionCallback<Sdm>(this, &Sdm::setFlag)));
-    options.addOption(Option("node", "n", "Register to node(*)")
-                          .argument("ip")
-                          .repeatable(true)
-                          .callback(OptionCallback<Sdm>(this, &Sdm::addNode)));
     options.addOption(Option("ip", "i", "This node has this ip(*)")
                           .argument("ip")
                           .repeatable(true)
@@ -151,6 +142,19 @@ class Sdm : public ServerApplication {
 
     std::thread *data_server = 0;
 
+    if (flags.size() == 0) {
+      help("", "");
+      return Application::EXIT_USAGE;
+    }
+
+    Redis::pingRedis();
+
+    logger().information(
+        "[main ] Redis ping %s",
+        std::string((Redis::addNode(localhost)) ? "Succesful" : "Failed"));
+
+    Redis::addNode(localhost);
+
     if (flags.count("serve")) {
       TCPServer *tcp = new TCPServer(
           new TCPServerConnectionFactoryImpl<NodeServerHandler>(), cmd_port);
@@ -179,18 +183,10 @@ class Sdm : public ServerApplication {
           }
 
       done:
-
         logger().information("[Node ] Node from enviroment %s", head);
-        nodes.insert(head);
-      }
-
-      if (nodes.size()) {
-        for (auto node : nodes) {
-          join_node(self, node, cmd_port);
-        }
       }
     } else {
-      if (nodes.size()) {
+      if (!put_files.size() && !get_files.size()) {
         help("", "");
         return Application::EXIT_USAGE;
       }
@@ -205,11 +201,11 @@ class Sdm : public ServerApplication {
 
     if (put_files.size() || get_files.size()) {
       for (auto put : put_files) {
-        put_file(self, cmd_port, put);
+        put_file(localhost, cmd_port, put);
       }
 
       for (auto get : get_files) {
-        get_file(self, cmd_port, get);
+        get_file(localhost, cmd_port, get);
       }
     }
 
@@ -230,11 +226,6 @@ class Sdm : public ServerApplication {
     if (data_server) {
       data_server->join();
       delete data_server;
-    }
-
-    if (flags.size() == 0) {
-      help("", "");
-      return Application::EXIT_USAGE;
     }
 
     return Application::EXIT_OK;

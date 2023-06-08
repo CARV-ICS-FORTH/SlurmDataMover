@@ -16,8 +16,8 @@ void NodeServerHandler ::run() {
   Application &app = Application::instance();
   Poco::Logger &log = app.logger();
   try {
-    const Node *node = Node::getFromIp(sock.peerAddress().host().toString());
-    std::string aka = (node) ? ("(aka " + node->name + ")") : "(unknown)";
+    const Node &node = Node::getFromIp(sock.peerAddress().host().toString());
+    std::string aka = (node) ? ("(aka " + node.name + ")") : "(unknown)";
     std::string op;
     op = sdm_unpack(sock);
 

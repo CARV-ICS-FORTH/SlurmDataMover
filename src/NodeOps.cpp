@@ -1,6 +1,7 @@
 #include "NodeOps.h"
 #include "ClientOps.h"
 #include "Poco/Util/Application.h"
+#include "Redis.h"
 #include "Utils.h"
 #include "getData.h"
 
@@ -21,13 +22,13 @@ void file_update(const File &file, Poco::Net::IPAddress remote,
 }
 
 void broadcast_file(const File &file, std::string &aka, Poco::Logger &log) {
-  Node *self = Node::getLocalhostNode();
+  Node &self = Node::getLocalhostNode();
 
   log.information("[Node ] Brodcast file %s from %s%s", file.file_name,
-                  self->addresses[0].toString(), aka);
+                  self.addresses[0].toString(), aka);
 
-  for (auto &node : Node::getNodes()) {
-    if (node != *self)
+  for (auto &node : Redis::getAllNodes()) {
+    if (node != self)
       file_update(file, node.addresses[0], 5555);
   }
 }
@@ -104,17 +105,17 @@ void handle_join(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
     new_node.addresses.emplace_back(addr);
   }
 
-  if (!Node::addNode(new_node))
+  if (!Redis::addNode(new_node))
     log.information("[Node ] Join from %s of existing node %s",
                     sock.peerAddress().toString(), aka);
   else {
     log.information("[Node ] Join from %s of new node (%s)",
                     sock.peerAddress().toString(), new_node.name);
 
-    const Node *self = Node::getLocalhostNode();
+    const Node &self = Node::getLocalhostNode();
 
-    for (auto &node : Node::getNodes()) {
-      if (node != *self)
+    for (auto &node : Redis::getAllNodes()) {
+      if (node != self)
         join_node(self, new_node.getIpAddress().toString(), 5555);
     }
   }

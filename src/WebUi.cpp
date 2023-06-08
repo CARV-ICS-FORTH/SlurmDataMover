@@ -5,6 +5,7 @@
 
 #include "File.h"
 #include "Node.h"
+#include "Redis.h"
 #include "Utils.h"
 
 using namespace Poco::Net;
@@ -64,7 +65,7 @@ class WebUiHandler : public HTTPRequestHandler {
       Tag col1(oss, "div class='row is-marginless'");
       { Tag col1(oss, "div class='col-1'"); }
       {
-        writeTable(oss, Node::getNodes(), &Node::toHTML,
+        writeTable(oss, Redis::getAllNodes(), &Node::toHTML,
                    {"Hostname", "Mounts", "Addresses"});
         writeTable(oss, File::files, &File::toHTML,
                    {"File", "Location", "Size", "Nodes"});
