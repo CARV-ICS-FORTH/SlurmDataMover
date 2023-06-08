@@ -6,7 +6,7 @@
  */
 
 #include "PeerClient.h"
-#include "../color.h"
+#include "../../src/Utils.h"
 #include <errno.h>
 #include <vector>
 
@@ -22,27 +22,18 @@ PeerClient::PeerClient(std::string hostname, int portno) {
   this->ClientPort = portno;
 }
 
-void PeerClient::LogError(std::string msg) {
-  std::cerr << "ERROR: " << msg << " [" << strerror(errno) << "] @ " << __FILE__
-            << ':' << __LINE__ << std::endl;
-}
-
-void PeerClient::Log(std::string msg) {
-  std::cout << "[" << msg << "]" << std::endl;
-}
-
 void PeerClient::ConnectWithServer(std::string hostname, int portno,
                                    std::vector<std::string> files) {
   RegisterPeer(hostname, portno);
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0)
-    LogError("PeerClient Opening Socket");
+    Log::Error("Peer", " Opening Socket");
 
   server = gethostbyname(ClientHostName.c_str());
   if (server == NULL) {
-    LogError("PeerClient No Such Host");
-    Log("PeerClient: Close Client Connection");
+    Log::Error("Peer", " No Such Host");
+    Log::Info("Peer", ": Close Client Connection");
     exit(-1);
   }
 
@@ -52,18 +43,18 @@ void PeerClient::ConnectWithServer(std::string hostname, int portno,
         server->h_length);
   serv_addr.sin_port = htons(ClientPort);
   if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    LogError("PeerClient On Connecting");
+    Log::Error("Peer", " On Connecting");
 
   for (std::string file : files) { // listing of files on server
     // send to server node file name and It`s path where is located
     if (send(sockfd, file.c_str(), MAX_COMMAND_LEN, 0) < 0) {
-      LogError("PeerClient getfile:send_request: Sending Error");
+      Log::Error("Peer", " getfile:send_request: Sending Error");
     }
     ReceiveFilefromServer(sockfd, file);
   }
 
   if (send(sockfd, "exit", MAX_PACKET_CHUNK_LEN, 0) < 0) {
-    LogError("Failed Sending [exit] Command to Server");
+    Log::Error("Peer", "Failed Sending [exit] Command to Server");
   }
   close(sockfd);
 }
@@ -76,21 +67,20 @@ void PeerClient::GetFileLengthFromServer(std::string file_name,
 
   /* Get File length, under 256 characters message*/
   if (recv(SOCKET, buffer, MAX_PACKET_CHUNK_LEN, 0) < 0) {
-    LogError("PeerClient Not Reading File Size: Close Client Connection");
+    Log::Error("Peer", " Not Reading File Size: Close Client Connection");
     exit(-1);
   }
 
   file_data_len = atoi(buffer);
-  Log(std::string(KRED) + "Get: " + std::string(RESET) + file_name + " from " +
-      ClientHostName + +" SIZE: " + std::string(KRED) + std::string(RESET) +
-      std::to_string(file_data_len) + "B - Start");
+  Log::Info("Peer", "Get: %s from %s SIZE: %lu B - Start", file_name,
+            ClientHostName, file_data_len);
 }
 
 FILE *PeerClient::CreateFileDescriptor(char *file_name) {
 
   FILE *fp = fopen(file_name, "wb+");
   if (fp == NULL) {
-    LogError("PeerClient File open error");
+    Log::Error("Peer", " File open error");
     exit(-1);
   }
   return fp;
@@ -99,12 +89,11 @@ FILE *PeerClient::CreateFileDescriptor(char *file_name) {
 void PeerClient::CheckFileValidation(int received, int file_data_len) {
 
   if (received >= file_data_len) {
-    Log(std::string(KRED) + "File Recieved From " + ClientHostName +
-        " Length:" + std::string(RESET) + std::to_string(file_data_len) +
-        std::string(KGRN) + std::string(TICK) + " - END");
+    Log::Info("Peer", "File Recieved From %s Length: %lu B - END",
+              ClientHostName, file_data_len);
   } else {
-    Log("CONCERN:" + std::string(KRED) + " File Length not matching" +
-        std::string(KYEL) + std::string(RESET));
+    Log::Error("Peer", "File Length not matching (expected %lu, recieved: %lu)",
+               file_data_len, received);
     exit(-1);
   }
 }
@@ -122,10 +111,10 @@ void PeerClient::ReceiveFilefromServer(int SOCKET, std::string file_name) {
   while (received < file_data_len) {
     int R = recv(SOCKET, buffer, MAX_PACKET_CHUNK_LEN, 0);
     if (R < 0) {
-      LogError("While Receiving File Data From Server");
+      Log::Error("Peer", "failed recv()");
     }
     if (!fputs(buffer, fp)) {
-      LogError("While Saving To File Data Received From Server");
+      Log::Error("Peer", "failed fputs()");
     };
     memset(buffer, 0, sizeof(buffer));
     received += R;

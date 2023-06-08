@@ -1,8 +1,8 @@
 #include "getData.h"
 #include "PeerClient.h"
 #include <iostream>
-#include <vector>
 #include <string>
+#include <vector>
 
 void getDataFile(std::string PeerServerHostName, int PeerServerPort,
                  std::vector<std::string> files) {

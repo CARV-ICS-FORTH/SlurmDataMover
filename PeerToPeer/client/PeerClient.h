@@ -9,21 +9,21 @@
 #define PEERCLIENT_H_
 #include "../color.h"
 #include <errno.h>
-#include <vector>
-#include <string>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
+#include <string>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <regex.h>
-//#include <thread>
+#include <sys/types.h>
+#include <unistd.h>
+#include <vector>
+// #include <thread>
+#include <csignal>
 #include <iostream>
 #include <signal.h>
-#include <csignal>
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -35,8 +35,8 @@ private:
   int sockfd = 0, portno = 0;
   struct sockaddr_in serv_addr;
   struct hostent *server;
-  char buffer[256] = { 0 };
-  char ip[INET_ADDRSTRLEN] = { 0 };
+  char buffer[256] = {0};
+  char ip[INET_ADDRSTRLEN] = {0};
   unsigned char *receive = NULL;
 
   void RegisterPeer(std::string hostname, int portno);
@@ -45,8 +45,6 @@ private:
   FILE *CreateFileDescriptor(char *file_name);
   void CheckFileValidation(int received, int file_data_len);
   void ReceiveFilefromServer(int SOCKET, std::string file_name);
-  void LogError(std::string msg);
-  void Log(std::string msg);
 
 public:
   PeerClient(std::string, int);

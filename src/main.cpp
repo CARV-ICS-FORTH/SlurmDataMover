@@ -78,7 +78,7 @@ class Sdm : public ServerApplication {
     std::string mname = mount.substr(0, mount.find_first_of('@'));
     std::string mpath = mount.substr(name.size());
     localhost.mounts[mname] = mpath;
-    logger().information("[Node ] Added mount '%s' at '%s'", mname, mpath);
+    Log::Info("[Node ] Added mount '%s' at '%s'", mname, mpath);
   }
 
   void setFlag(const std::string &name, const std::string &value) {
@@ -147,10 +147,12 @@ class Sdm : public ServerApplication {
       return Application::EXIT_USAGE;
     }
 
+    Log::setLoggger(logger());
+
     Redis::pingRedis();
 
-    logger().information(
-        "[main ] Redis ping %s",
+    Log::Info(
+        "Main", "Redis ping %s ",
         std::string((Redis::addNode(localhost)) ? "Succesful" : "Failed"));
 
     Redis::addNode(localhost);
@@ -160,7 +162,7 @@ class Sdm : public ServerApplication {
           new TCPServerConnectionFactoryImpl<NodeServerHandler>(), cmd_port);
       tcp->start();
       servers["Node "] = tcp;
-      logger().information("[Node ] Starting on port %hu", cmd_port);
+      Log::Info("Node", "Starting on port %hu", cmd_port);
 
       data_server =
           StartTheServer(Node::getHostname(), std::to_string(data_port));
@@ -183,7 +185,7 @@ class Sdm : public ServerApplication {
           }
 
       done:
-        logger().information("[Node ] Node from enviroment %s", head);
+        Log::Info("Node", "Node from enviroment %s", head);
       }
     } else {
       if (!put_files.size() && !get_files.size()) {
@@ -196,7 +198,7 @@ class Sdm : public ServerApplication {
       HTTPServer *http = new HTTPServer(new WebUiFactory, wui_port);
       http->start();
       servers["WebUI"] = http;
-      logger().information("[WebUI] Starting on port %hu", wui_port);
+      Log::Info("WebUI", "Starting on port %hu", wui_port);
     }
 
     if (put_files.size() || get_files.size()) {
@@ -210,17 +212,18 @@ class Sdm : public ServerApplication {
     }
 
     if (wui_port || flags.count("serve")) {
-      logger().information("[main ] Waiting for cntrl-c");
+      Log::Info("Main", "Waiting for cntrl-c");
       waitForTerminationRequest();
-      logger().information("\n[main ] cntrl-c received");
+      std::cerr << std::endl;
+      Log::Info("Main", "cntrl-c received");
     }
 
     for (auto &server : servers) {
       const std::string &name = server.first;
-      logger().information("[%s] Stopping", name);
+      Log::Info(name, "Stopping");
       server.second->stop();
       delete server.second;
-      logger().information("[%s] Stopped", name);
+      Log::Info(name, "Stopped");
     }
 
     if (data_server) {

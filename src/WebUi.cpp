@@ -1,6 +1,5 @@
 #include "WebUi.h"
 #include "Poco/Net/HTTPServerResponse.h"
-#include "Poco/Util/Application.h"
 #include <sstream>
 
 #include "File.h"
@@ -9,7 +8,6 @@
 #include "Utils.h"
 
 using namespace Poco::Net;
-using namespace Poco::Util;
 
 class WebUiHandler : public HTTPRequestHandler {
   template <class T>
@@ -38,9 +36,7 @@ class WebUiHandler : public HTTPRequestHandler {
   }
 
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
-    Application &app = Application::instance();
-    app.logger().information("[WebUI] Request from %s",
-                             request.clientAddress().toString());
+    Log::Info("WebUI", "Request from %s", request.clientAddress().toString());
 
     response.setChunkedTransferEncoding(true);
     response.setContentType("text/html");

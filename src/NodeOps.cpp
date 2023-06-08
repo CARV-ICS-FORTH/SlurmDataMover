@@ -1,19 +1,15 @@
 #include "NodeOps.h"
 #include "ClientOps.h"
-#include "Poco/Util/Application.h"
 #include "Redis.h"
 #include "Utils.h"
 #include "getData.h"
 
 using namespace Poco::Net;
-using namespace Poco::Util;
 
 void file_update(const File &file, Poco::Net::IPAddress remote,
                  uint16_t cmd_port) {
-  Application &app = Application::instance();
   StreamSocket ss;
-  app.logger().information("[Update] Connect(%s,%d)", remote.toString(),
-                           (int)cmd_port);
+  Log::Info("Update", "Connect(%s,%d)", remote.toString(), (int)cmd_port);
   ss.connect(SocketAddress(remote, cmd_port));
 
   sdm_pack(ss, "update");
@@ -21,11 +17,11 @@ void file_update(const File &file, Poco::Net::IPAddress remote,
   ss << file;
 }
 
-void broadcast_file(const File &file, std::string &aka, Poco::Logger &log) {
+void broadcast_file(const File &file, std::string &aka) {
   Node &self = Node::getLocalhostNode();
 
-  log.information("[Node ] Brodcast file %s from %s%s", file.file_name,
-                  self.addresses[0].toString(), aka);
+  Log::Info("Node", "Brodcast file %s from %s%s", file.file_name,
+            self.addresses[0].toString(), aka);
 
   for (auto &node : Redis::getAllNodes()) {
     if (node != self)
@@ -33,14 +29,14 @@ void broadcast_file(const File &file, std::string &aka, Poco::Logger &log) {
   }
 }
 
-void handle_put(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
+void handle_put(StreamSocket &sock, std::string &aka) {
   std::string file;
   file = sdm_unpack(sock);
 
   bool exists = File::files.count(file);
-  log.information("[Node ] Put %s file %s from %s%s",
-                  std::string((exists) ? "existing" : "new"), file,
-                  sock.peerAddress().toString(), aka);
+  Log::Info("Node", "Put %s file %s from %s%s",
+            std::string((exists) ? "existing" : "new"), file,
+            sock.peerAddress().toString(), aka);
 
   if (exists) {
     ((File &)*File::files.find(file)).nodes.insert(Node::getHostname());
@@ -50,15 +46,15 @@ void handle_put(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
     sdm_pack(sock, "Create");
   }
 
-  broadcast_file(*(File::files.find(file)), aka, log);
+  broadcast_file(*(File::files.find(file)), aka);
 }
 
-void handle_get(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
+void handle_get(StreamSocket &sock, std::string &aka) {
   std::string file_name;
   file_name = sdm_unpack(sock);
 
-  log.information("[Node ] Get file %s from %s%s - Start", file_name,
-                  sock.peerAddress().toString(), aka);
+  Log::Info("Node", "Get file %s from %s%s - Start", file_name,
+            sock.peerAddress().toString(), aka);
 
   bool found = File::files.count(file_name) == 1;
   std::string found_str = (found) ? "true" : "false";
@@ -71,9 +67,9 @@ void handle_get(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
     path = "??";
   }
 
-  log.information("[Node ] Get file %s from %s%s - %s on %s at %s", file_name,
-                  sock.peerAddress().toString(), aka,
-                  std::string((found) ? "Found" : "Missing"), host, path);
+  Log::Info("Node", "Get file %s from %s%s - %s on %s at %s", file_name,
+            sock.peerAddress().toString(), aka,
+            std::string((found) ? "Found" : "Missing"), host, path);
 
   if (found) {
     std::vector<std::string> files = {file_name};
@@ -85,7 +81,7 @@ void handle_get(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
   sdm_pack(sock, path);
 }
 
-void handle_join(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
+void handle_join(StreamSocket &sock, std::string &aka) {
 
   std::string hostname = sdm_unpack(sock); // Send Hostname
 
@@ -99,18 +95,18 @@ void handle_join(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
 
   for (; addr_cnt; addr_cnt--) {
     std::string addr = sdm_unpack(sock);
-    log.information("[Node ] Join from %s of node %s - Addr: %s",
-                    sock.peerAddress().toString(), aka, addr);
+    Log::Info("Node", "Join from %s of node %s - Addr: %s",
+              sock.peerAddress().toString(), aka, addr);
 
     new_node.addresses.emplace_back(addr);
   }
 
   if (!Redis::addNode(new_node))
-    log.information("[Node ] Join from %s of existing node %s",
-                    sock.peerAddress().toString(), aka);
+    Log::Info("Node", "Join from %s of existing node %s",
+              sock.peerAddress().toString(), aka);
   else {
-    log.information("[Node ] Join from %s of new node (%s)",
-                    sock.peerAddress().toString(), new_node.name);
+    Log::Info("Node", "Join from %s of new node (%s)",
+              sock.peerAddress().toString(), new_node.name);
 
     const Node &self = Node::getLocalhostNode();
 
@@ -121,14 +117,13 @@ void handle_join(StreamSocket &sock, std::string &aka, Poco::Logger &log) {
   }
 }
 
-void handle_file_update(StreamSocket &sock, std::string &aka,
-                        Poco::Logger &log) {
+void handle_file_update(StreamSocket &sock, std::string &aka) {
   File update("temp");
 
   bool exists = File::files.count(update.file_name) == 1;
 
-  log.information("[Update] Update from %s of node %s",
-                  sock.peerAddress().toString(), aka);
+  Log::Info("Update", "Update from %s of node %s",
+            sock.peerAddress().toString(), aka);
 
   sock >> update;
 

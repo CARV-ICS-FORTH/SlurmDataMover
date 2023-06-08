@@ -1,10 +1,10 @@
 #ifndef GETDATA_H_
 #define GETDATA_H_
 
-#include <vector>
-#include <string>
 #include "PeerClient.h"
 #include <iostream>
+#include <string>
+#include <vector>
 
 void getDataFile(std::string PeerServerHostName, int PeerServerPort,
                  std::vector<std::string> files);
