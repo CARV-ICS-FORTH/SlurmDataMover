@@ -11,6 +11,7 @@
 #include "startServer.h"
 #include <iomanip>
 #include <iostream>
+#include <regex>
 
 using namespace Poco;
 using namespace Poco::Net;
@@ -22,7 +23,7 @@ class Sdm : public ServerApplication {
   std::unordered_set<std::string> flags;
   Node &localhost = Node::getLocalhostNode();
 
-  void help(const std::string &name, const std::string &value) {
+  void help(const std::string &name = "", const std::string &value = "") {
     std::cerr << "SDM - SLURM Data Manager" << std::endl;
 
     std::cerr << std::endl;
@@ -62,7 +63,6 @@ class Sdm : public ServerApplication {
   }
 
   void addFile(const std::string &name, const std::string &value) {
-    std::cerr << __func__ << std::endl;
     flags.insert(name);
     if (name == "get") {
       get_files.push_back(value);
@@ -75,10 +75,17 @@ class Sdm : public ServerApplication {
   }
 
   void addMount(const std::string &name, const std::string &mount) {
+    static std::regex fmt("[^@]+@[^@]+");
+
+    if (!std::regex_match(mount, fmt)) {
+      std::cerr << "Improper mount format for \'" << mount << "\'" << std::endl;
+      help();
+    }
+
     std::string mname = mount.substr(0, mount.find_first_of('@'));
     std::string mpath = mount.substr(name.size());
     localhost.mounts[mname] = mpath;
-    Log::Info("[Node ] Added mount '%s' at '%s'", mname, mpath);
+    Log::Info("Node", "Added mount '%s' at '%s'", mname, mpath);
   }
 
   void setFlag(const std::string &name, const std::string &value) {
@@ -143,11 +150,9 @@ class Sdm : public ServerApplication {
     std::thread *data_server = 0;
 
     if (flags.size() == 0) {
-      help("", "");
+      help();
       return Application::EXIT_USAGE;
     }
-
-    Log::setLoggger(logger());
 
     Redis::pingRedis();
 
@@ -233,6 +238,9 @@ class Sdm : public ServerApplication {
 
     return Application::EXIT_OK;
   }
+
+public:
+  Sdm() : ServerApplication() { Log::setLoggger(logger()); }
 };
 
 POCO_SERVER_MAIN(Sdm)
