@@ -9,6 +9,7 @@ using Poco::Redis::Array;
 using Poco::Redis::BulkString;
 using Poco::Redis::Client;
 using Poco::Redis::Command;
+using Poco::Redis::RedisType;
 using Poco::Redis::Type;
 
 Client client(Node::getHostname(), 6379);
@@ -21,17 +22,22 @@ bool Redis ::pingRedis() {
   return ret == "PONG";
 }
 
+template <typename T> T getRaw(const RedisType *rdt) {
+  return ((Type<BulkString> *)rdt)->value();
+}
+
 Node::Nodes Redis ::getAllNodes() {
   Node::Nodes ret;
 
   try {
-    Array cmd;
+    Array scan;
     std::string currsor = "0";
+    std::vector<std::string> node_keys;
     do {
-      cmd << "SCAN" << currsor << "match"
-          << "node:*";
+      scan << "SCAN" << currsor << "match"
+           << "node:*";
 
-      Array response = client.execute<Array>(cmd);
+      Array response = client.execute<Array>(scan);
 
       currsor = std::to_string(response.get<BulkString>(0));
 
@@ -41,14 +47,28 @@ Node::Nodes Redis ::getAllNodes() {
         for (auto result : results) {
           auto test = result->toString();
           if (result->isBulkString()) {
-            std::string node = ((Type<BulkString> *)result.get())->value();
-            std::cerr << "[" << node << "]";
-            ret.insert(node.substr(5));
+            node_keys.push_back(getRaw<BulkString>(result.get()));
           }
         }
       }
-
     } while (currsor != "0");
+
+    {
+      Array mget;
+      mget << "MGET";
+      for (auto &nk : node_keys)
+        mget << nk;
+
+      Array results = client.execute<Array>(mget);
+
+      if (!results.isNull()) {
+        for (auto result : results) {
+          Node temp("");
+          temp.fromJSON(getRaw<BulkString>(result));
+          ret.insert(temp);
+        }
+      }
+    }
   } catch (Poco::Exception &e) {
     std::cerr << e.displayText();
   }
@@ -59,14 +79,11 @@ Node::Nodes Redis ::getAllNodes() {
 Node Redis ::getNodeByIp(std::string ip) { return Node::NotFound; }
 
 bool Redis::addNode(const Node &node) {
-  std::map<std::string, std::string> map;
-
-  map["hello"] = "world";
-
   try {
-    Command set = Command::hmset("node:" + node.name, map);
+    Array cmd;
+    cmd << "SET" << node.getKey() << node.toJSON();
 
-    std::string ret = client.execute<std::string>(set);
+    std::string ret = client.execute<std::string>(cmd);
   } catch (Poco::Exception &e) {
     std::cerr << e.displayText();
   }

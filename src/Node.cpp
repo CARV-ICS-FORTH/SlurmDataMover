@@ -1,10 +1,15 @@
 #include "Node.h"
 
+#include "Poco/JSON/Object.h"
+#include "Poco/JSON/Parser.h"
 #include "Poco/Net/DNS.h"
 #include "Redis.h"
 #include "Utils.h"
 #include <iostream>
 
+using Poco::JSON::Array;
+using Poco::JSON::Object;
+using Poco::JSON::Parser;
 using Poco::Net::DNS;
 using Poco::Net::HostEntry;
 
@@ -51,6 +56,50 @@ const Node Node ::getFromIp(std::string ip) {
 }
 
 Node ::operator bool() const { return *this == NotFound; }
+
+std::string Node ::getKey() const { return "node:" + name; }
+
+std::string Node ::toJSON() const {
+  Object obj;
+  Array ips;
+
+  obj.set("name", name);
+
+  for (auto addr : addresses)
+    ips.add(addr.toString());
+
+  obj.set("addresses", ips);
+
+  Object mounts;
+
+  for (auto mount : this->mounts)
+    mounts.set(mount.first, mount.second);
+
+  obj.set("mounts", mounts);
+
+  std::stringstream ss;
+  obj.stringify(ss);
+  return ss.str();
+}
+
+void Node ::fromJSON(const std::string &json) {
+  Parser parser;
+  Object::Ptr obj = parser.parse(json).extract<Object::Ptr>();
+
+  name = obj->getValue<std::string>("name");
+
+  Array::Ptr ips = obj->getArray("addresses");
+
+  addresses.clear();
+  for (auto ip : (*ips))
+    addresses.emplace_back(ip.toString());
+
+  Object::Ptr mounts = obj->getObject("mounts");
+  this->mounts.clear();
+  for (auto mount : (*mounts))
+    this->mounts.insert(
+        std::make_pair(mount.first, mount.second.convert<std::string>()));
+}
 
 const Node Node::NotFound("NodeNotFound");
 

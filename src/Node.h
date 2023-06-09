@@ -28,6 +28,10 @@ struct Node {
 
   operator bool() const;
 
+  std::string getKey() const;
+  std::string toJSON() const;
+  void fromJSON(const std::string &json);
+
   static const Node NotFound;
 
 private:
