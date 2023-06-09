@@ -32,21 +32,3 @@ void get_file(const Node &local_server, uint16_t cmd_port, std::string file) {
   else
     Log::Info("GET", "Missn %s at %s in %s", file, host, path);
 }
-
-void join_node(const Node &local_server, std::string remote,
-               uint16_t cmd_port) {
-  Log::Info("Node", "Join %s at node %s", local_server.name, remote);
-  StreamSocket ss;
-
-  ss.connect(SocketAddress(remote, cmd_port));
-
-  sdm_pack(ss, "join");
-
-  sdm_pack(ss, local_server.name); // Send Hostname
-
-  sdm_pack(
-      ss, std::to_string(local_server.addresses.size())); // Number of addresses
-
-  for (auto &ip : local_server.addresses) // Send all addresses
-    sdm_pack(ss, ip.toString());
-}

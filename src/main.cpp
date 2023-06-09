@@ -34,10 +34,8 @@ class Sdm : public ServerApplication {
     std::cerr << "    wts --put file.txt" << std::endl;
     std::cerr << "  Get file.txt:" << std::endl;
     std::cerr << "    wts --get file.txt" << std::endl;
-    std::cerr << "  Start primary Node Server:" << std::endl;
+    std::cerr << "  Start Node Server:" << std::endl;
     std::cerr << "    wts --serve" << std::endl;
-    std::cerr << "  Start secondary Node Server:" << std::endl;
-    std::cerr << "    wts --serve -node=<primary-ip>" << std::endl;
     std::cerr << std::endl;
 
     std::cerr << "Options:" << std::endl;
@@ -54,10 +52,7 @@ class Sdm : public ServerApplication {
 
     std::cerr << std::endl;
     std::cerr << "You must pass atleast one of Get,Put or Serve.";
-
     std::cerr << std::endl;
-    std::cerr << "(*): Get,Put,Node,Ip can be used more than once."
-              << std::endl;
 
     exit(0);
   }
@@ -106,17 +101,17 @@ class Sdm : public ServerApplication {
     options.addOption(Option("wui", "w", "Webui Port")
                           .argument("port", false)
                           .binding("wui_port"));
-    options.addOption(Option("get", "g", "Get file(*)")
+    options.addOption(Option("get", "g", "Get file")
                           .argument("file")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addFile)));
-    options.addOption(Option("put", "p", "Put file(*)")
+    options.addOption(Option("put", "p", "Put file")
                           .argument("file")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addFile)));
     options.addOption(Option("serve", "s", "Start Node server")
                           .callback(OptionCallback<Sdm>(this, &Sdm::setFlag)));
-    options.addOption(Option("ip", "i", "This node has this ip(*)")
+    options.addOption(Option("ip", "i", "Extra IP for this node")
                           .argument("ip")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addIp)));

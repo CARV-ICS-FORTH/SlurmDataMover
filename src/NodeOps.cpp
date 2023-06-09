@@ -81,42 +81,6 @@ void handle_get(StreamSocket &sock, std::string &aka) {
   sdm_pack(sock, path);
 }
 
-void handle_join(StreamSocket &sock, std::string &aka) {
-
-  std::string hostname = sdm_unpack(sock); // Send Hostname
-
-  Node new_node(hostname);
-
-  std::string addr_cnt_str = sdm_unpack(sock); // Number of addresses
-
-  int addr_cnt = std::atoi(addr_cnt_str.c_str());
-
-  new_node.addresses.reserve(addr_cnt);
-
-  for (; addr_cnt; addr_cnt--) {
-    std::string addr = sdm_unpack(sock);
-    Log::Info("Node", "Join from %s of node %s - Addr: %s",
-              sock.peerAddress().toString(), aka, addr);
-
-    new_node.addresses.emplace_back(addr);
-  }
-
-  if (!Redis::addNode(new_node))
-    Log::Info("Node", "Join from %s of existing node %s",
-              sock.peerAddress().toString(), aka);
-  else {
-    Log::Info("Node", "Join from %s of new node (%s)",
-              sock.peerAddress().toString(), new_node.name);
-
-    const Node &self = Node::getLocalhostNode();
-
-    for (auto &node : Redis::getAllNodes()) {
-      if (node != self)
-        join_node(self, new_node.getIpAddress().toString(), 5555);
-    }
-  }
-}
-
 void handle_file_update(StreamSocket &sock, std::string &aka) {
   File update("temp");
 
@@ -135,7 +99,4 @@ void handle_file_update(StreamSocket &sock, std::string &aka) {
 }
 
 std::unordered_map<std::string, node_op *> node_op_map = {
-    {"get", handle_get},
-    {"put", handle_put},
-    {"join", handle_join},
-    {"update", handle_file_update}};
+    {"get", handle_get}, {"put", handle_put}, {"update", handle_file_update}};
