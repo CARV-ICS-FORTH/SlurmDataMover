@@ -13,20 +13,19 @@ SDM requires the following packages:
 Optionaly:
 
 - ccmake (configuration ui)
-- libpoco (vdf tool)
-- libncurses (vtop)
+- libpoco
 - doxygen (documentation)
 
 ## ArchLinux
 
-    sudo pacman -S cmake # poco ncurses doxygen
+    sudo pacman -S cmake # poco doxygen
 
 ## CentOS
 
-    sudo yum install cmake # poco-devel poco-foundation poco-net ncurses-devel doxygen
+    sudo yum install cmake # poco-devel poco-foundation poco-net doxygen
 
 ## Ubuntu
 
-    sudo apt-get install cmake # cmake-curses-gui libpoco-dev libncursesw5-dev libncurses-dev doxygen
+    sudo apt-get install cmake # libpoco-dev doxygen
 
 # Folder layout
