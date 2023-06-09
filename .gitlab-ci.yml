@@ -1,0 +1,26 @@
+image: ubuntu
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  services:
+    - name: redis
+      command: ["--protected-mode no"]
+  before_script:
+    - echo -e "\e[0Ksection_start:`date +%s`:reqs[collapsed=true]\r\e[0KRequirements"
+    - apt-get update
+    - apt-get install -y cmake libpoco-dev gcc g++ clang-format make git
+    - echo -e "\e[0Ksection_end:`date +%s`:reqs\r\e[0K"
+  script:
+    - echo -e "\e[0Ksection_start:`date +%s`:build[collapsed=true]\r\e[0KBuild"
+    - cd build
+    - cmake ..
+    - make -j `nproc`
+    - echo -e "\e[0Ksection_end:`date +%s`:build\r\e[0K"
+    - echo -e "\e[0Ksection_start:`date +%s`:style[collapsed=true]\r\e[0KStyle"
+    - git diff
+    - echo -e "\e[0Ksection_end:`date +%s`:style\r\e[0K"
+    - ./sdm -s
