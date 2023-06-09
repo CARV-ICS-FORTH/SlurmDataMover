@@ -7,23 +7,21 @@
 #include <string>
 #include <unordered_set>
 
-struct File {
+struct File : public JSONable {
+  typedef std::unordered_set<File> Files;
   std::unordered_set<std::string> nodes;
   std::string file_name;
   std::string location;
   size_t size;
   File(const std::string &file_name);
   void toHTML(std::ostream &os) const;
-  void updateFrom(const File &update);
 
-  typedef std::unordered_set<File> FileState;
-  static FileState files;
+  IMPLEMENTS_JSONable;
+
+  static const File NotFound;
 };
 
 bool operator==(const File &lhs, const File &rhs);
-Poco::Net::StreamSocket &operator<<(Poco::Net::StreamSocket &sock,
-                                    const File &file);
-Poco::Net::StreamSocket &operator>>(Poco::Net::StreamSocket &sock, File &file);
 
 namespace std {
 template <> struct hash<File> {

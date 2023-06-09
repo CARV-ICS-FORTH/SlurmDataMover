@@ -6,9 +6,10 @@
 #include <unordered_set>
 #include <vector>
 
+#include "JSONable.h"
 #include <Poco/Net/IPAddress.h>
 
-struct Node {
+struct Node : public JSONable {
   Node(const std::string name);
   typedef std::unordered_set<Node> Nodes;
   typedef std::set<Node> SortedNodes;
@@ -28,9 +29,7 @@ struct Node {
 
   operator bool() const;
 
-  std::string getKey() const;
-  std::string toJSON() const;
-  void fromJSON(const std::string &json);
+  IMPLEMENTS_JSONable;
 
   static const Node NotFound;
 

@@ -1,4 +1,10 @@
 #include "File.h"
+#include "Poco/JSON/Object.h"
+#include "Poco/JSON/Parser.h"
+
+using Poco::JSON::Array;
+using Poco::JSON::Object;
+using Poco::JSON::Parser;
 
 File ::File(const std::string &file_name) : file_name(file_name), size(0) {
   nodes.insert(Node::getHostname());
@@ -13,35 +19,38 @@ void File ::toHTML(std::ostream &os) const {
   }
   os << "</td></tr>\n";
 }
+std::string File ::getKey() const { return "file:" + file_name; }
+std::string File ::toJSON() const {
+  Object obj;
+  Array nodes;
 
-void File ::updateFrom(const File &update) {
-  nodes.insert(update.nodes.begin(), update.nodes.end());
+  obj.set("name", file_name);
+
+  for (auto node : this->nodes)
+    nodes.add(node);
+
+  obj.set("nodes", nodes);
+  obj.set("size", size);
+
+  std::stringstream ss;
+  obj.stringify(ss);
+  return ss.str();
 }
+void File ::fromJSON(const std::string &json) {
+  Parser parser;
+  Object::Ptr obj = parser.parse(json).extract<Object::Ptr>();
 
+  file_name = obj->getValue<std::string>("name");
+  size = obj->getValue<size_t>("size");
+
+  Array::Ptr nodes = obj->getArray("nodes");
+
+  this->nodes.clear();
+  for (auto node : (*nodes))
+    this->nodes.insert(node.toString());
+}
 bool operator==(const File &lhs, const File &rhs) {
   return lhs.file_name == rhs.file_name;
 }
 
-Poco::Net::StreamSocket &operator<<(Poco::Net::StreamSocket &sock,
-                                    const File &file) {
-  sdm_pack(sock, file.file_name);
-  sdm_pack(sock, file.location);
-  sdm_pack_size(sock, file.nodes.size());
-  for (auto &node : file.nodes)
-    sdm_pack(sock, node);
-  return sock;
-}
-Poco::Net::StreamSocket &operator>>(Poco::Net::StreamSocket &sock, File &file) {
-  file.file_name = sdm_unpack(sock);
-  file.location = sdm_unpack(sock);
-  size_t nodes = sdm_unpack_size(sock);
-  file.nodes.clear();
-  file.nodes.reserve(nodes);
-
-  while (nodes--) {
-    file.nodes.insert(sdm_unpack(sock));
-  }
-  return sock;
-}
-
-File ::FileState File ::files;
+const File File::NotFound("NotFound");

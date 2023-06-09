@@ -1,15 +1,8 @@
 #pragma once
 #include "Poco/Any.h"
 #include "Poco/Logger.h"
-#include "Poco/Net/StreamSocket.h"
 #include <iostream>
 #include <string>
-
-void sdm_pack(Poco::Net::StreamSocket &os, const std::string &string);
-std::string sdm_unpack(Poco::Net::StreamSocket &is);
-
-void sdm_pack_size(Poco::Net::StreamSocket &os, const size_t &size);
-size_t sdm_unpack_size(Poco::Net::StreamSocket &is);
 
 class Tag {
 public:

@@ -1,5 +1,3 @@
-#include "ClientOps.h"
-#include "NodeServer.h"
 #include "Poco/Environment.h"
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/SocketStream.h"
@@ -151,19 +149,12 @@ class Sdm : public ServerApplication {
 
     Redis::pingRedis();
 
-    Log::Info(
-        "Main", "Redis ping %s ",
-        std::string((Redis::addNode(localhost)) ? "Succesful" : "Failed"));
+    Log::Info("Main", "Redis ping %s ",
+              std::string((Redis::add(localhost)) ? "Succesful" : "Failed"));
 
-    Redis::addNode(localhost);
+    Redis::add(localhost);
 
     if (flags.count("serve")) {
-      TCPServer *tcp = new TCPServer(
-          new TCPServerConnectionFactoryImpl<NodeServerHandler>(), cmd_port);
-      tcp->start();
-      servers["Node "] = tcp;
-      Log::Info("Node", "Starting on port %hu", cmd_port);
-
       data_server =
           StartTheServer(Node::getHostname(), std::to_string(data_port));
 
@@ -203,11 +194,15 @@ class Sdm : public ServerApplication {
 
     if (put_files.size() || get_files.size()) {
       for (auto put : put_files) {
-        put_file(localhost, cmd_port, put);
+        File file = Redis::getFile(put);
+        if (file == File::NotFound) {
+          file = File(put);
+          Redis::add(file);
+        }
       }
 
       for (auto get : get_files) {
-        get_file(localhost, cmd_port, get);
+        // get_file(localhost, cmd_port, get);
       }
     }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "File.h"
+#include "JSONable.h"
 #include "Node.h"
 
 struct Redis {
@@ -7,5 +9,9 @@ struct Redis {
   static Node::Nodes getAllNodes();
   static Node getNodeByHostname(std::string hostname);
   static Node getNodeByIp(std::string ip);
-  static bool addNode(const Node &node);
+
+  static File::Files getAllFiles();
+  static File getFile(std::string name);
+
+  static bool add(const JSONable &node);
 };
