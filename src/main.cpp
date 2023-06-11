@@ -20,6 +20,7 @@ class Sdm : public ServerApplication {
   std::vector<std::string> put_files;
   std::unordered_set<std::string> flags;
   Node &localhost = Node::getLocalhostNode();
+  std::string redis_node = Node::getHostname();
 
   void help(const std::string &name = "", const std::string &value = "") {
     std::cerr << "SDM - SLURM Data Manager" << std::endl;
@@ -90,9 +91,9 @@ class Sdm : public ServerApplication {
   }
 
   void defineOptions(OptionSet &options) {
-    options.addOption(Option("cport", "c", "Command Port")
+    options.addOption(Option("redis", "r", "Redis Port")
                           .argument("port")
-                          .binding("cmd_port"));
+                          .binding("redis_port"));
     options.addOption(Option("dport", "d", "Data Port")
                           .argument("port")
                           .binding("data_port"));
@@ -136,7 +137,7 @@ class Sdm : public ServerApplication {
     uint16_t wui_port = getPort("wui_port", 0);
     std::map<std::string, TCPServer *> servers;
 
-    uint16_t cmd_port = getPort("cmd_port", 5555);
+    uint16_t redis_port = getPort("redis_port", 6379);
 
     uint16_t data_port = getPort("data_port", 2222);
 
@@ -147,10 +148,12 @@ class Sdm : public ServerApplication {
       return Application::EXIT_USAGE;
     }
 
-    Redis::pingRedis();
+    Redis::connect(redis_node, redis_port);
+
+    bool ping = Redis::pingRedis();
 
     Log::Info("Main", "Redis ping %s ",
-              std::string((Redis::add(localhost)) ? "Succesful" : "Failed"));
+              std::string(ping ? "Succesful" : "Failed"));
 
     Redis::add(localhost);
 
@@ -202,7 +205,12 @@ class Sdm : public ServerApplication {
       }
 
       for (auto get : get_files) {
-        // get_file(localhost, cmd_port, get);
+        File file = Redis::getFile(get);
+        if (file == File::NotFound) {
+          Log::Error("Get file: %s not found", get);
+        } else {
+          Log::Info("Get file: %s found", get);
+        }
       }
     }
 
