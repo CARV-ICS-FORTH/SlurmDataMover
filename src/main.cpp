@@ -77,7 +77,7 @@ class Sdm : public ServerApplication {
     }
 
     std::string mname = mount.substr(0, mount.find_first_of('@'));
-    std::string mpath = mount.substr(name.size());
+    std::string mpath = mount.substr(mname.size() + 1);
     localhost.mounts[mname] = mpath;
     Log::Info("Node", "Added mount '%s' at '%s'", mname, mpath);
   }
