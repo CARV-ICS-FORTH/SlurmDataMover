@@ -153,6 +153,17 @@ File Redis::getFile(std::string name) {
   }
 }
 
+void Redis::requestFiles(std::vector<std::string> files, uint16_t port) {
+  std::string sport = std::to_string(port);
+  for (auto file : files) {
+    Array get;
+    get << "XADD"
+        << "request:" + file << "*"
+        << "host" << Node::getHostname() << "port" << sport;
+    client.execute<BulkString>(get);
+  }
+}
+
 bool Redis::add(const JSONable &obj) {
   try {
     Array cmd;
