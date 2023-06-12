@@ -9,7 +9,6 @@ void connect(std::string hostname, uint16_t port);
 bool pingRedis();
 Node::Nodes getAllNodes();
 Node getNodeByHostname(std::string hostname);
-Node getNodeByIp(std::string ip);
 
 File::Files getAllFiles();
 File getFile(std::string name);

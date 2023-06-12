@@ -25,8 +25,6 @@ struct Node : public JSONable {
   static Node &getLocalhostNode();
   static const Node *get(std::string hostname);
 
-  static const Node getFromIp(std::string ip);
-
   operator bool() const;
 
   IMPLEMENTS_JSONable;

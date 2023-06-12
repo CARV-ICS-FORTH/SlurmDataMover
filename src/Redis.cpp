@@ -86,8 +86,6 @@ Node::Nodes Redis ::getAllNodes() {
   return ret;
 }
 
-Node Redis ::getNodeByIp(std::string ip) { return Node::NotFound; }
-
 File::Files Redis ::getAllFiles() {
   File::Files ret;
 

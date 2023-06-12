@@ -47,13 +47,6 @@ Node &Node ::getLocalhostNode() {
 
 Poco::Net::IPAddress Node ::getIpAddress() const { return addresses.at(0); }
 
-const Node Node ::getFromIp(std::string ip) {
-  if (ip == "127.0.0.1")
-    return getLocalhostNode();
-
-  return Redis::getNodeByIp(ip);
-}
-
 Node ::operator bool() const { return *this == NotFound; }
 
 std::string Node ::getKey() const { return "node:" + name; }
