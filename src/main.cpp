@@ -199,17 +199,22 @@ class Sdm : public ServerApplication {
       for (auto put : put_files) {
         File file = Redis::getFile(put);
         if (file == File::NotFound) {
-          file = File(put);
-          Redis::add(file);
+          Log::Info("PUT", "New File: %s", put);
+        } else {
+          Log::Info("PUT", "Old File: %s", put);
         }
+        file = File(put);
+        Redis::add(file);
       }
 
       for (auto get : get_files) {
         File file = Redis::getFile(get);
         if (file == File::NotFound) {
-          Log::Error("Get file: %s not found", get);
+          Log::Error("GET", "File: %s not found", get);
         } else {
-          Log::Info("Get file: %s found", get);
+          Log::Info("GET", "File: %s found", get);
+          file.nodes.insert(Node::getHostname());
+          Redis::add(file);
         }
       }
     }

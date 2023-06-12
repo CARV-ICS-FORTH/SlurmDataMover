@@ -140,7 +140,20 @@ File::Files Redis ::getAllFiles() {
   return ret;
 }
 
-File Redis::getFile(std::string name) { return File::NotFound; }
+File Redis::getFile(std::string name) {
+  Array get;
+  get << "GET"
+      << "file:" + name;
+  BulkString response = client.execute<BulkString>(get);
+
+  if (response.isNull())
+    return File::NotFound;
+  else {
+    File ret("");
+    ret.fromJSON(response);
+    return ret;
+  }
+}
 
 bool Redis::add(const JSONable &obj) {
   try {
