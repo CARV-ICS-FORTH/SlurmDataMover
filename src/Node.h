@@ -25,6 +25,13 @@ struct Node : public JSONable {
   static Node &getLocalhostNode();
   static const Node *get(std::string hostname);
 
+  bool parseMountPath(const std::string &mount_path, std::string &file,
+                      std::string &mount);
+
+  bool parseMountPath(const std::string &mount_path, std::string &file);
+
+  std::string normalizeMountPath(std::string mount_path);
+
   operator bool() const;
 
   IMPLEMENTS_JSONable;

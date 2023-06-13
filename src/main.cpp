@@ -1,19 +1,57 @@
+#include "BulkServer.h"
 #include "Poco/Environment.h"
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/SocketStream.h"
-#include "Poco/Net/TCPServer.h"
+#include "Poco/Process.h"
+#include "Poco/StringTokenizer.h"
+#include "Poco/TemporaryFile.h"
 #include "Poco/Util/ServerApplication.h"
 #include "Redis.h"
 #include "Utils.h"
 #include "WebUi.h"
-#include "startServer.h"
 #include <iomanip>
 #include <iostream>
-#include <regex>
-
-using namespace Poco;
 using namespace Poco::Net;
 using namespace Poco::Util;
+
+void fetch_files(std::vector<std::string> files, uint16_t port) {
+  Poco::TemporaryFile temp_folder;
+  temp_folder.keep();
+  temp_folder.createDirectory();
+  Log::Info("Env", "Work folder %s", temp_folder.path());
+  for (auto file : files) {
+    Poco::File target(Node::getLocalhostNode().normalizeMountPath(file));
+    std::string local_file_name;
+    Node::getLocalhostNode().parseMountPath(file, local_file_name);
+    Poco::File local_file(local_file_name);
+    Poco::File link(temp_folder.path() + "/" + local_file_name);
+    Log::Info("Env", "Link for %s at %s -> %s", file, link.path(),
+              target.path());
+    if (!link.exists())
+      target.linkTo(link.path());
+    else
+      Log::Info("Env", "Link for %s at %s exists", file, link.path());
+
+    if (target.exists())
+      Log::Info("Env", "Target for %s at %s already exists", file,
+                target.path());
+    else {
+      Log::Info("Env", "Target for %s at %s must be fetched", file,
+                target.path());
+      if (local_file.exists()) {
+        Log::Info("Env", "Target for %s at %s copied from nfs %s", file,
+                  target.path(), local_file.path());
+        local_file.copyTo(target.path());
+      } else {
+        Log::Info(
+            "Env",
+            "Target for %s at %s not found localy, requesting file from others",
+            file, target.path());
+        Redis::requestFiles(files, port);
+      }
+    }
+  }
+}
 
 class Sdm : public ServerApplication {
   std::vector<std::string> get_files;
@@ -21,6 +59,7 @@ class Sdm : public ServerApplication {
   std::unordered_set<std::string> flags;
   Node &localhost = Node::getLocalhostNode();
   std::string redis_node = Node::getHostname();
+  std::string exec;
 
   void help(const std::string &name = "", const std::string &value = "") {
     std::cerr << "SDM - SLURM Data Manager" << std::endl;
@@ -30,11 +69,11 @@ class Sdm : public ServerApplication {
     std::cerr << "Usage:" << std::endl;
 
     std::cerr << "  Put file.txt:" << std::endl;
-    std::cerr << "    wts --put file.txt" << std::endl;
+    std::cerr << "    sdm --put file.txt" << std::endl;
     std::cerr << "  Get file.txt:" << std::endl;
-    std::cerr << "    wts --get file.txt" << std::endl;
+    std::cerr << "    sdm --get file.txt" << std::endl;
     std::cerr << "  Start Node Server:" << std::endl;
-    std::cerr << "    wts --serve" << std::endl;
+    std::cerr << "    sdm --serve" << std::endl;
     std::cerr << std::endl;
 
     std::cerr << "Options:" << std::endl;
@@ -50,7 +89,7 @@ class Sdm : public ServerApplication {
     }
 
     std::cerr << std::endl;
-    std::cerr << "You must pass atleast one of Get,Put or Serve.";
+    std::cerr << "You must pass at least one of Get,Put or Serve.";
     std::cerr << std::endl;
 
     exit(0);
@@ -69,15 +108,12 @@ class Sdm : public ServerApplication {
   }
 
   void addMount(const std::string &name, const std::string &mount) {
-    static std::regex fmt("[^@]+@[^@]+");
+    std::string mname;
+    std::string mpath;
 
-    if (!std::regex_match(mount, fmt)) {
-      std::cerr << "Improper mount format for \'" << mount << "\'" << std::endl;
+    if (!localhost.parseMountPath(mount, mname, mpath))
       help();
-    }
 
-    std::string mname = mount.substr(0, mount.find_first_of('@'));
-    std::string mpath = mount.substr(mname.size() + 1);
     localhost.mounts[mname] = mpath;
     Log::Info("Node", "Added mount '%s' at '%s'", mname, mpath);
   }
@@ -90,13 +126,17 @@ class Sdm : public ServerApplication {
     localhost.addresses.emplace_back(ip);
   }
 
+  void addExec(const std::string &name, const std::string &cmd) {
+    Log::Info("Node", "Added exec command '%s'", cmd);
+    exec = cmd;
+  }
+
   void defineOptions(OptionSet &options) {
     options.addOption(Option("redis", "r", "Redis Port")
                           .argument("port")
                           .binding("redis_port"));
-    options.addOption(Option("dport", "d", "Data Port")
-                          .argument("port")
-                          .binding("data_port"));
+    options.addOption(
+        Option("bulk", "b", "Bulk Port").argument("port").binding("bulk_port"));
     options.addOption(Option("wui", "w", "Webui Port")
                           .argument("port", false)
                           .binding("wui_port"));
@@ -120,6 +160,11 @@ class Sdm : public ServerApplication {
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addMount)));
 
+    options.addOption(Option("exec", "e", "Command to execute")
+                          .argument("command")
+                          .repeatable(true)
+                          .callback(OptionCallback<Sdm>(this, &Sdm::addExec)));
+
     options.addOption(Option("help", "h", "Print Help")
                           .callback(OptionCallback<Sdm>(this, &Sdm::help)));
   }
@@ -134,14 +179,12 @@ class Sdm : public ServerApplication {
   }
 
   int main(const std::vector<std::string> &) {
-    uint16_t wui_port = getPort("wui_port", 0);
+    uint16_t wui_port = getPort("wui_port");
     std::map<std::string, TCPServer *> servers;
 
     uint16_t redis_port = getPort("redis_port", 6379);
 
-    uint16_t data_port = getPort("data_port", 2222);
-
-    std::thread *data_server = 0;
+    uint16_t bulk_port = getPort("bulk_port");
 
     if (flags.size() == 0) {
       help();
@@ -158,11 +201,11 @@ class Sdm : public ServerApplication {
     Redis::add(localhost);
 
     if (flags.count("serve")) {
-      data_server =
-          StartTheServer(Node::getHostname(), std::to_string(data_port));
+      servers["Bulk"] = new BulkServer(bulk_port);
+      bulk_port = servers["Bulk"]->port();
 
-      if (Environment::has("SLURM_JOB_NODELIST")) {
-        std::string node_env = Environment::get("SLURM_JOB_NODELIST");
+      if (Poco::Environment::has("SLURM_JOB_NODELIST")) {
+        std::string node_env = Poco::Environment::get("SLURM_JOB_NODELIST");
         node_env = node_env.substr(0, node_env.find_first_of(","));
         std::string head;
         bool after_cage = false;
@@ -188,11 +231,12 @@ class Sdm : public ServerApplication {
       }
     }
 
-    if (wui_port) {
-      HTTPServer *http = new HTTPServer(new WebUiFactory, wui_port);
-      http->start();
-      servers["WebUI"] = http;
-      Log::Info("WebUI", "Starting on port %hu", wui_port);
+    if (wui_port)
+      servers["WebUI"] = new HTTPServer(new WebUiFactory, wui_port);
+
+    for (auto server : servers) {
+      server.second->start();
+      Log::Info(server.first, "Starting on port %hu", server.second->port());
     }
 
     if (put_files.size() || get_files.size()) {
@@ -207,17 +251,18 @@ class Sdm : public ServerApplication {
         Redis::add(file);
       }
 
-      for (auto get : get_files) {
-        File file = Redis::getFile(get);
-        if (file == File::NotFound) {
-          Log::Error("GET", "File: %s not found", get);
-        } else {
-          Log::Info("GET", "File: %s found", get);
-          file.nodes.insert(Node::getHostname());
-          Redis::add(file);
-        }
-      }
+      fetch_files(get_files, bulk_port);
     }
+
+    std::vector<std::string> args;
+
+    Poco::StringTokenizer stk(exec, " ");
+
+    for (auto tok : stk)
+      args.push_back(tok);
+
+    std::cerr << "Launch:" << Poco::Process::launch(*stk.begin(), args).wait()
+              << std::endl;
 
     if (wui_port || flags.count("serve")) {
       Log::Info("Main", "Waiting for cntrl-c");
@@ -229,14 +274,8 @@ class Sdm : public ServerApplication {
     for (auto &server : servers) {
       const std::string &name = server.first;
       Log::Info(name, "Stopping");
-      server.second->stop();
       delete server.second;
       Log::Info(name, "Stopped");
-    }
-
-    if (data_server) {
-      data_server->join();
-      delete data_server;
     }
 
     return Application::EXIT_OK;

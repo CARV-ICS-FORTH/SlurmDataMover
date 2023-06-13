@@ -17,7 +17,7 @@ File getFile(std::string name);
  * Place a request for the \c files.
  *
  * \param files Files to be requested
- * \param port On this host to accept the files.
+ * \param port Port used in this host to accept the files.
  */
 void requestFiles(std::vector<std::string> files, uint16_t port);
 

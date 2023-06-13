@@ -5,6 +5,7 @@
 #include "Redis.h"
 #include "Utils.h"
 #include <iostream>
+#include <regex>
 
 using Poco::JSON::Array;
 using Poco::JSON::Object;
@@ -46,6 +47,35 @@ Node &Node ::getLocalhostNode() {
 }
 
 Poco::Net::IPAddress Node ::getIpAddress() const { return addresses.at(0); }
+
+bool Node ::parseMountPath(const std::string &mount_path, std::string &file,
+                           std::string &mount) {
+  static std::regex mount_fmt("([^@]+)@([^@]+)");
+  std::smatch match;
+  if (!std::regex_match(mount_path, match, mount_fmt)) {
+    std::cerr << "Improper mount format for \'" << mount_path << "\'"
+              << std::endl;
+    return false;
+  }
+
+  file = match[1];
+  mount = match[2];
+
+  return true;
+}
+
+bool Node::parseMountPath(const std::string &mount_path, std::string &file) {
+  std::string temp;
+  return parseMountPath(mount_path, file, temp);
+}
+
+std::string Node ::normalizeMountPath(std::string mount_path) {
+  std::string file;
+  std::string mount;
+  if (!parseMountPath(mount_path, file, mount))
+    return "";
+  return mounts.at(mount) + file;
+}
 
 Node ::operator bool() const { return *this == NotFound; }
 

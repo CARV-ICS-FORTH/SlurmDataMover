@@ -28,3 +28,5 @@ void Log ::Trace(std::string scope, std::string msg) {
 void Log ::Error(std::string scope, std::string msg) {
   Log::logger->error(sco_str(scope, __func__) + msg);
 }
+
+std::string createTempFolder(std::string root) { static int cnt = 0; }
