@@ -14,12 +14,12 @@ using Poco::Redis::Type;
 
 Client client;
 
-void Redis ::connect(std::string host, uint16_t port) {
+void Redis ::connect(Poco::Net::SocketAddress &sock_addr) {
   try {
-    client.connect(host, port);
+    client.connect(sock_addr);
   } catch (Poco::Exception &e) {
-    std::cerr << "In Redis::connect(" << host << ":" << port
-              << "): " << e.displayText() << std::endl;
+    std::cerr << "In Redis::connect(" << sock_addr.host() << ":"
+              << sock_addr.port() << "): " << e.displayText() << std::endl;
     throw e;
   }
 }

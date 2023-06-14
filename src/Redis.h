@@ -3,9 +3,10 @@
 #include "File.h"
 #include "JSONable.h"
 #include "Node.h"
+#include <Poco/Net/SocketAddress.h>
 
 namespace Redis {
-void connect(std::string hostname, uint16_t port);
+void connect(Poco::Net::SocketAddress &sock_addr);
 bool pingRedis();
 Node::Nodes getAllNodes();
 Node getNodeByHostname(std::string hostname);

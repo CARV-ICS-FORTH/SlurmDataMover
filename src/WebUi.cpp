@@ -36,7 +36,7 @@ class WebUiHandler : public HTTPRequestHandler {
   }
 
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
-    Log::Info("WebUI", "Request from %s", request.clientAddress().toString());
+    Log::Info("Http", "Request from %s", request.clientAddress().toString());
 
     response.setChunkedTransferEncoding(true);
     response.setContentType("text/html");

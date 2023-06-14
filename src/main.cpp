@@ -1,9 +1,8 @@
-#include "BulkServer.h"
+#include "Bulk.h"
 #include "Poco/Environment.h"
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/SocketStream.h"
-#include "Poco/Process.h"
-#include "Poco/StringTokenizer.h"
+#include "Poco/Path.h"
 #include "Poco/TemporaryFile.h"
 #include "Poco/Util/ServerApplication.h"
 #include "Redis.h"
@@ -14,7 +13,7 @@
 using namespace Poco::Net;
 using namespace Poco::Util;
 
-void fetch_files(std::vector<std::string> files, uint16_t port) {
+std::string build_workdir(std::vector<std::string> files) {
   Poco::TemporaryFile temp_folder;
   temp_folder.keep();
   temp_folder.createDirectory();
@@ -24,13 +23,25 @@ void fetch_files(std::vector<std::string> files, uint16_t port) {
     std::string local_file_name;
     Node::getLocalhostNode().parseMountPath(file, local_file_name);
     Poco::File local_file(local_file_name);
-    Poco::File link(temp_folder.path() + "/" + local_file_name);
+    Poco::File link(Poco::Path(temp_folder.path()).append(local_file_name));
     Log::Info("Env", "Link for %s at %s -> %s", file, link.path(),
               target.path());
     if (!link.exists())
       target.linkTo(link.path());
     else
       Log::Info("Env", "Link for %s at %s exists", file, link.path());
+  }
+
+  return temp_folder.path();
+}
+
+void fetch_files(std::vector<std::string> files, uint16_t port) {
+  std::vector<std::string> req_files;
+  for (auto file : files) {
+    Poco::File target(Node::getLocalhostNode().normalizeMountPath(file));
+    std::string local_file_name;
+    Node::getLocalhostNode().parseMountPath(file, local_file_name);
+    Poco::File local_file(local_file_name);
 
     if (target.exists())
       Log::Info("Env", "Target for %s at %s already exists", file,
@@ -39,26 +50,33 @@ void fetch_files(std::vector<std::string> files, uint16_t port) {
       Log::Info("Env", "Target for %s at %s must be fetched", file,
                 target.path());
       if (local_file.exists()) {
-        Log::Info("Env", "Target for %s at %s copied from nfs %s", file,
-                  target.path(), local_file.path());
+        Log::Info("Env", "Target for %s at %s copied from %s", file,
+                  target.path(),
+                  Poco::Path(local_file.path()).absolute().toString());
         local_file.copyTo(target.path());
       } else {
         Log::Info(
             "Env",
             "Target for %s at %s not found localy, requesting file from others",
             file, target.path());
-        Redis::requestFiles(files, port);
+        req_files.push_back(local_file_name);
       }
     }
+  }
+
+  if (req_files.size()) {
+    BulkReciever br;
+    Redis::requestFiles(req_files, port);
   }
 }
 
 class Sdm : public ServerApplication {
+  std::vector<std::string> all_files;
   std::vector<std::string> get_files;
   std::vector<std::string> put_files;
   std::unordered_set<std::string> flags;
   Node &localhost = Node::getLocalhostNode();
-  std::string redis_node = Node::getHostname();
+  SocketAddress redis_sa = SocketAddress(Node::getHostname(), 6379);
   std::string exec;
 
   void help(const std::string &name = "", const std::string &value = "") {
@@ -97,6 +115,9 @@ class Sdm : public ServerApplication {
 
   void addFile(const std::string &name, const std::string &value) {
     flags.insert(name);
+
+    all_files.push_back(value);
+
     if (name == "get") {
       get_files.push_back(value);
       return;
@@ -132,9 +153,9 @@ class Sdm : public ServerApplication {
   }
 
   void defineOptions(OptionSet &options) {
-    options.addOption(Option("redis", "r", "Redis Port")
-                          .argument("port")
-                          .binding("redis_port"));
+    options.addOption(Option("redis", "r", "Redis socket address")
+                          .argument("host:port")
+                          .binding("redis"));
     options.addOption(
         Option("bulk", "b", "Bulk Port").argument("port").binding("bulk_port"));
     options.addOption(Option("wui", "w", "Webui Port")
@@ -178,11 +199,43 @@ class Sdm : public ServerApplication {
     return static_cast<uint16_t>(config().getUInt(port, def));
   }
 
+  bool initSocketAddress(SocketAddress &sa, std::string bind) {
+    if (config().has(bind) == false)
+      return true;
+    try { // port only format - use default host
+      uint16_t port = config().getUInt(bind);
+      SocketAddress temp(sa.host(), port);
+      sa = temp;
+      return true;
+    } catch (Poco::Exception &e) {
+    }
+    try { // host and port format
+      std::string hostAndPort = config().getString(bind);
+      SocketAddress temp(hostAndPort);
+      sa = temp;
+      return true;
+    } catch (Poco::Exception &e) {
+    }
+    try { // host only format - use default port
+      std::string host = config().getString(bind);
+      SocketAddress temp(host, sa.port());
+      sa = temp;
+      return true;
+    } catch (Poco::Exception &e) {
+    }
+    std::cerr << "Invalid " << bind << " socket address '"
+              << config().getString(bind) << "'" << std::endl;
+    return false;
+  }
+
   int main(const std::vector<std::string> &) {
     uint16_t wui_port = getPort("wui_port");
     std::map<std::string, TCPServer *> servers;
 
-    uint16_t redis_port = getPort("redis_port", 6379);
+    if (!initSocketAddress(redis_sa, "redis")) {
+      help();
+      return Application::EXIT_USAGE;
+    }
 
     uint16_t bulk_port = getPort("bulk_port");
 
@@ -191,17 +244,17 @@ class Sdm : public ServerApplication {
       return Application::EXIT_USAGE;
     }
 
-    Redis::connect(redis_node, redis_port);
+    Redis::connect(redis_sa);
 
     bool ping = Redis::pingRedis();
 
     Log::Info("Main", "Redis ping %s ",
               std::string(ping ? "Succesful" : "Failed"));
 
-    Redis::add(localhost);
-
     if (flags.count("serve")) {
-      servers["Bulk"] = new BulkServer(bulk_port);
+      Redis::add(localhost);
+
+      servers["Bulk"] = new BulkSender(bulk_port);
       bulk_port = servers["Bulk"]->port();
 
       if (Poco::Environment::has("SLURM_JOB_NODELIST")) {
@@ -232,7 +285,7 @@ class Sdm : public ServerApplication {
     }
 
     if (wui_port)
-      servers["WebUI"] = new HTTPServer(new WebUiFactory, wui_port);
+      servers["Http"] = new HTTPServer(new WebUiFactory, wui_port);
 
     for (auto server : servers) {
       server.second->start();
@@ -251,18 +304,12 @@ class Sdm : public ServerApplication {
         Redis::add(file);
       }
 
+      std::string cwd = build_workdir(all_files);
+
       fetch_files(get_files, bulk_port);
+
+      executeProgram(exec, cwd);
     }
-
-    std::vector<std::string> args;
-
-    Poco::StringTokenizer stk(exec, " ");
-
-    for (auto tok : stk)
-      args.push_back(tok);
-
-    std::cerr << "Launch:" << Poco::Process::launch(*stk.begin(), args).wait()
-              << std::endl;
 
     if (wui_port || flags.count("serve")) {
       Log::Info("Main", "Waiting for cntrl-c");
