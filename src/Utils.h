@@ -55,3 +55,5 @@ struct Log {
 private:
   static Poco::Logger *logger;
 };
+
+int executeProgram(std::string program, std::string cwd);

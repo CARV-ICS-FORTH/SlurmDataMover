@@ -1,4 +1,6 @@
 #include "Utils.h"
+#include "Poco/Process.h"
+#include "Poco/StringTokenizer.h"
 #include <sstream>
 
 std::string Tag ::indentation = "";
@@ -10,7 +12,7 @@ void Log ::setLoggger(Poco::Logger &logger) { Log::logger = &logger; }
 std::string sco_str(std::string scope, std::string level) {
   std::stringstream ss;
   ss << "[";
-  ss.width(5);
+  ss.width(4);
   ss << scope << "] -";
   ss.width(6);
   ss << level << " :: ";
@@ -29,4 +31,17 @@ void Log ::Error(std::string scope, std::string msg) {
   Log::logger->error(sco_str(scope, __func__) + msg);
 }
 
-std::string createTempFolder(std::string root) { static int cnt = 0; }
+int executeProgram(std::string program, std::string cwd) {
+  std::vector<std::string> args;
+
+  Poco::StringTokenizer stk(program, " ");
+  std::string executable;
+
+  for (auto tok : stk)
+    if (executable == "")
+      executable = tok;
+    else
+      args.push_back(tok);
+
+  return Poco::Process::launch(*stk.begin(), args, cwd).wait();
+}
