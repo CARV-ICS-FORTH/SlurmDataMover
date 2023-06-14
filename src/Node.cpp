@@ -1,7 +1,9 @@
 #include "Node.h"
+#include "Poco/Exception.h"
 #include "Poco/JSON/Object.h"
 #include "Poco/JSON/Parser.h"
 #include "Poco/Net/DNS.h"
+#include "Poco/Path.h"
 #include "Redis.h"
 #include "Utils.h"
 #include <iostream>
@@ -74,7 +76,9 @@ std::string Node ::normalizeMountPath(std::string mount_path) {
   std::string mount;
   if (!parseMountPath(mount_path, file, mount))
     return "";
-  return mounts.at(mount) + file;
+  if (!mounts.count(mount))
+    throw Poco::PathNotFoundException("Mount not found", mount);
+  return Poco::Path(mounts.at(mount)).append(file).toString();
 }
 
 Node ::operator bool() const { return *this == NotFound; }
