@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.16)
 
 project(sdm)
 
@@ -15,9 +15,14 @@ if(NOT Poco_FOUND)
 	find_package(Poco QUIET REQUIRED COMPONENTS Net Util Redis)
 endif()
 
-file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp PeerToPeer/*.h PeerToPeer/*.cpp)
-add_custom_target(format ALL COMMAND clang-format -i ${FMT_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+find_program(FORMATER clang-format)
 
+if(FORMATER)
+	file(GLOB_RECURSE FMT_FILES src/*.h src/*.cpp PeerToPeer/*.h PeerToPeer/*.cpp)
+	add_custom_target(format ALL COMMAND clang-format -i ${FMT_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+else()
+	message("-- clang-format not found - Formatting skipped")
+endif()
 aux_source_directory(src SRC_FILES)
 add_executable(sdm ${SRC_FILES})
 target_link_libraries(sdm Poco::Util Poco::Net Poco::Redis p2p)
