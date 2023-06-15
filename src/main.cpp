@@ -3,6 +3,7 @@
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/SocketStream.h"
 #include "Poco/Path.h"
+#include "Poco/SimpleFileChannel.h"
 #include "Poco/TemporaryFile.h"
 #include "Poco/Util/ServerApplication.h"
 #include "Redis.h"
@@ -153,11 +154,13 @@ class Sdm : public ServerApplication {
   }
 
   void defineOptions(OptionSet &options) {
+
     options.addOption(Option("redis", "r", "Redis socket address")
                           .argument("host:port")
                           .binding("redis"));
     options.addOption(
         Option("bulk", "b", "Bulk Port").argument("port").binding("bulk_port"));
+
     options.addOption(Option("wui", "w", "Webui Port")
                           .argument("port", false)
                           .binding("wui_port"));
@@ -185,6 +188,11 @@ class Sdm : public ServerApplication {
                           .argument("command")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addExec)));
+
+    ServerApplication::defineOptions(options);
+
+    // Add short daemon option
+    ((Option &)options.getOption("daemon")).shortName("d");
 
     options.addOption(Option("help", "h", "Print Help")
                           .callback(OptionCallback<Sdm>(this, &Sdm::help)));
@@ -242,6 +250,11 @@ class Sdm : public ServerApplication {
     if (flags.size() == 0) {
       help();
       return Application::EXIT_USAGE;
+    }
+
+    if (!isInteractive()) {
+      logger().setChannel(new Poco::SimpleFileChannel("/tmp/sdm.log"));
+      Log::Info("Init", "Running as a daemon");
     }
 
     Redis::connect(redis_sa);
