@@ -35,38 +35,61 @@ class WebUiHandler : public HTTPRequestHandler {
     }
   }
 
+  void body(std::ostream &os) {
+    {
+      Tag nav(os, "nav class='nav'");
+      Tag div(os, "div class='nav-center'");
+      Tag a(os, "a class='brand'",
+            "SLURM Data Manager @ " + Node::getHostname());
+    }
+    Tag col1(os, "div class='row is-marginless'");
+    { Tag col1(os, "div class='col-1'"); }
+    {
+      writeTable(os, Redis::getAllNodes(), &Node::toHTML,
+                 {"Status", "Hostname", "Mounts", "Addresses"});
+      writeTable(os, Redis::getAllFiles(), &File::toHTML,
+                 {"File", "Location", "Size", "Nodes"});
+    }
+  }
+
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
-    Log::Info("Http", "Request from %s", request.clientAddress().toString());
+    static int updates = 0;
 
     response.setChunkedTransferEncoding(true);
     response.setContentType("text/html");
 
     std::stringstream oss;
-    oss << "<!DOCTYPE html>" << std::endl;
-    {
-      Tag html(oss, "html lang='en'");
+    if ("/update" != request.getURI()) {
+      updates = 0;
+      oss << "<!DOCTYPE html>" << std::endl;
       {
-        Tag head(oss, "head");
-        { Tag title(oss, "title", "SDM Billboard @ " + Node::getHostname()); }
-        Tag style(
-            oss, "link rel='stylesheet' href='https://unpkg.com/chota@latest'");
+        Tag html(oss, "html lang='en'");
+        {
+          Tag head(oss, "head");
+          { Tag title(oss, "title", "SDM Billboard @ " + Node::getHostname()); }
+          Tag style(
+              oss,
+              "link rel='stylesheet' href='https://unpkg.com/chota@latest'");
+        }
+        Tag body_tag(oss, "body style='background-color:#ddd'");
+        body(oss);
       }
-      Tag body(oss, "body style='background-color:#ddd'");
       {
-        Tag nav(oss, "nav class='nav'");
-        Tag div(oss, "div class='nav-center'");
-        Tag a(oss, "a class='brand'",
-              "SLURM Data Manager @ " + Node::getHostname());
+        Tag(oss, "script",
+            "function update() {fetch(new Request('/update')).then((response) "
+            "=> response.blob()).then((blob) => blob.text()).then( (raw) => "
+            "{\nbody = document.getElementsByTagName('body')[0];\n "
+            "body.innerHTML=raw;\n})}\nsetInterval(update,200)");
       }
-      Tag col1(oss, "div class='row is-marginless'");
-      { Tag col1(oss, "div class='col-1'"); }
-      {
-        writeTable(oss, Redis::getAllNodes(), &Node::toHTML,
-                   {"Hostname", "Mounts", "Addresses"});
-        writeTable(oss, Redis::getAllFiles(), &File::toHTML,
-                   {"File", "Location", "Size", "Nodes"});
-      }
+    } else {
+      body(oss); // Update only sends body
+      updates++;
     }
+
+    if (updates % 100 == 0)
+      Log::Info("Http", "Request '%s' from %s (%d updates)", request.getURI(),
+                request.clientAddress().toString(), updates);
+
     response.send() << oss.str();
   }
 };

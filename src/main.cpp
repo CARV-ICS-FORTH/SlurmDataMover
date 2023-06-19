@@ -37,7 +37,8 @@ std::string build_workdir(std::vector<std::string> files) {
 }
 
 void fetch_files(std::vector<std::string> files, uint16_t port) {
-  std::vector<std::string> req_files;
+  BulkReciever::FileList req_files;
+  std::vector<std::string> file_ids;
   for (auto file : files) {
     Poco::File target(Node::getLocalhostNode().normalizeMountPath(file));
     std::string local_file_name;
@@ -60,14 +61,16 @@ void fetch_files(std::vector<std::string> files, uint16_t port) {
             "Env",
             "Target for %s at %s not found localy, requesting file from others",
             file, target.path());
-        req_files.push_back(local_file_name);
+        req_files[file] = local_file_name;
+        file_ids.push_back(file);
       }
     }
   }
 
-  if (req_files.size()) {
-    BulkReciever br;
-    Redis::requestFiles(req_files, port);
+  if (file_ids.size()) {
+    BulkReciever br(req_files);
+    Redis::requestFiles(file_ids, port);
+    br.wait();
   }
 }
 
@@ -145,11 +148,12 @@ class Sdm : public ServerApplication {
   }
 
   void addIp(const std::string &name, const std::string &ip) {
-    localhost.addresses.emplace_back(ip);
+    localhost.addresses.emplace(ip);
   }
 
   void addExec(const std::string &name, const std::string &cmd) {
     Log::Info("Node", "Added exec command '%s'", cmd);
+    flags.insert(name);
     exec = cmd;
   }
 
@@ -297,6 +301,12 @@ class Sdm : public ServerApplication {
       }
     }
 
+    if (!Redis::get(localhost)) {
+      Log::Error("Node",
+                 "Could not get node info for %s (is local sdm server running)",
+                 localhost);
+    }
+
     if (wui_port)
       servers["Http"] = new HTTPServer(new WebUiFactory, wui_port);
 
@@ -317,9 +327,11 @@ class Sdm : public ServerApplication {
         Redis::add(file);
       }
 
-      std::string cwd = build_workdir(all_files);
-
       fetch_files(get_files, bulk_port);
+    }
+
+    if (flags.count("exec")) {
+      std::string cwd = build_workdir(all_files);
 
       executeProgram(exec, cwd);
     }

@@ -22,10 +22,8 @@ void Node ::resolve() {
 
   const auto &addrs = entry.addresses();
 
-  addresses.reserve(addrs.size());
-
   for (auto &addr : addrs) {
-    addresses.emplace_back(addr);
+    addresses.insert(addr);
   }
 }
 
@@ -48,7 +46,7 @@ Node &Node ::getLocalhostNode() {
   return localhost;
 }
 
-Poco::Net::IPAddress Node ::getIpAddress() const { return addresses.at(0); }
+Poco::Net::IPAddress Node ::getIpAddress() const { return *addresses.begin(); }
 
 bool Node ::parseMountPath(const std::string &mount_path, std::string &file,
                            std::string &mount) {
@@ -118,7 +116,7 @@ void Node ::fromJSON(const std::string &json) {
 
   addresses.clear();
   for (auto ip : (*ips))
-    addresses.emplace_back(ip.toString());
+    addresses.emplace(ip.toString());
 
   Object::Ptr mounts = obj->getObject("mounts");
   this->mounts.clear();
@@ -131,15 +129,21 @@ const Node Node::NotFound("NodeNotFound");
 
 void Node ::toHTML(std::ostream &os) const {
   Tag row(os, "tr");
-  { Tag row(os, "td", name); }
   {
-    Tag row2(os, "td");
+    {
+      Tag cell2(os, "td");
+      Tag span(os, "span class='span is-small bg-error'", "Offline");
+    }
+    Tag cell(os, "td", name);
+  }
+  {
+    Tag cell(os, "td");
     for (auto &mount : mounts)
       os << Tag::indent() << mount.first << " : " << mount.second << "<br>"
          << std::endl;
   }
   {
-    Tag row2(os, "td");
+    Tag cell(os, "td");
     for (auto &addr : addresses)
       os << Tag::indent() << addr.toString() << "<br>" << std::endl;
   }

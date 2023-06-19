@@ -14,7 +14,7 @@ struct Node : public JSONable {
   typedef std::unordered_set<Node> Nodes;
   typedef std::set<Node> SortedNodes;
   std::string name;
-  std::vector<Poco::Net::IPAddress> addresses;
+  std::set<Poco::Net::IPAddress> addresses;
   std::unordered_map<std::string, std::string> mounts;
 
   Poco::Net::IPAddress getIpAddress() const;

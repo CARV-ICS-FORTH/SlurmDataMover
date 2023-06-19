@@ -2,6 +2,7 @@
 
 #include "Poco/Net/TCPServer.h"
 #include "Poco/Net/TCPServerConnectionFactory.h"
+#include <map>
 
 class BulkReciever : public Poco::Net::TCPServer {
   struct Transfer : Poco::Net::TCPServerConnection {
@@ -10,7 +11,13 @@ class BulkReciever : public Poco::Net::TCPServer {
   };
 
 public:
-  BulkReciever(uint16_t port = 0);
+  typedef std::map<std::string, std::string> FileList;
+  BulkReciever(FileList files, uint16_t port = 0);
+  void wait();
+
+private:
+  FileList files;
+  Poco::Event e;
 };
 
 class BulkSender : public Poco::Net::TCPServer {
