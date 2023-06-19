@@ -175,3 +175,17 @@ bool Redis::add(const JSONable &obj) {
   }
   return true;
 }
+
+bool Redis::get(JSONable &obj) {
+  try {
+    Array cmd;
+    cmd << "GET" << obj.getKey();
+
+    std::string ret = client.execute<BulkString>(cmd);
+
+    obj.fromJSON(ret);
+  } catch (Poco::Exception &e) {
+    std::cerr << "In Redis::get: " << e.displayText();
+  }
+  return true;
+}
