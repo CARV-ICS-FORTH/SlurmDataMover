@@ -158,10 +158,28 @@ void Redis::requestFiles(std::vector<std::string> files, uint16_t port) {
   for (auto file : files) {
     Array get;
     get << "XADD"
-        << "request:" + file << "*"
-        << "host" << Node::getHostname() << "port" << sport;
+        << "request"
+        << "*"
+        << "host" << Node::getHostname() << "port" << sport << "file" << file;
     client.execute<BulkString>(get);
   }
+}
+
+bool Redis::getRequest() {
+  Array get;
+  get << "XREAD"
+      << "COUNT"
+      << "1"
+      << "BLOCK"
+      << "0"
+      << "STREAMS"
+      << "request"
+      << "$";
+  RedisType::Ptr ret = client.sendCommand(get);
+  if(ret) {
+
+  }
+  return ret;
 }
 
 bool Redis::add(const JSONable &obj) {

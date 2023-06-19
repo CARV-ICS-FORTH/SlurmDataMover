@@ -22,6 +22,8 @@ File getFile(std::string name);
  */
 void requestFiles(std::vector<std::string> files, uint16_t port);
 
+bool getRequest(std::string file,);
+
 bool add(const JSONable &node);
 
 bool get(JSONable &node);

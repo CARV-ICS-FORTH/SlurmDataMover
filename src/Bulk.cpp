@@ -1,4 +1,5 @@
 #include "Bulk.h"
+#include "Redis.h"
 #include "Utils.h"
 
 BulkReciever::Transfer::Transfer(const Poco::Net::StreamSocket &s)
@@ -21,4 +22,13 @@ void BulkSender::Transfer::run() {}
 
 BulkSender::BulkSender(uint16_t port)
     : Poco::Net::TCPServer(
-          new Poco::Net::TCPServerConnectionFactoryImpl<Transfer>(), port) {}
+          new Poco::Net::TCPServerConnectionFactoryImpl<Transfer>(), port),
+      Poco::Thread("Bulk") {}
+
+void BulkSender::run() {
+  Log::Info("Bulk", "Ready to send");
+  while (1) {
+    std::cerr << "Request" << (Redis::getRequest() ? "Yep" : "Nop")
+              << std::endl;
+  }
+}

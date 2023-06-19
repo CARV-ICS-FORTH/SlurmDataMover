@@ -20,7 +20,7 @@ private:
   Poco::Event e;
 };
 
-class BulkSender : public Poco::Net::TCPServer {
+class BulkSender : public Poco::Net::TCPServer, public Poco::Thread {
   struct Transfer : Poco::Net::TCPServerConnection {
     Transfer(const Poco::Net::StreamSocket &s);
     void run();
@@ -28,4 +28,5 @@ class BulkSender : public Poco::Net::TCPServer {
 
 public:
   BulkSender(uint16_t port = 0);
+  void run();
 };
