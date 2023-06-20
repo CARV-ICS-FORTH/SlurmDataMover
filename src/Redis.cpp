@@ -176,8 +176,11 @@ bool Redis::getRequest() {
       << "request"
       << "$";
   RedisType::Ptr ret = client.sendCommand(get);
-  if(ret) {
-
+  if (ret) {
+    if (!ret->isArray())
+      return false;
+    Array *arr = (Array *)ret.get();
+    std::cerr << arr->toString();
   }
   return ret;
 }
