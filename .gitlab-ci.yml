@@ -11,7 +11,7 @@ build:
   before_script:
     - echo -e "\e[0Ksection_start:`date +%s`:reqs[collapsed=true]\r\e[0KRequirements"
     - apt-get update
-    - apt-get install -y cmake libpoco-dev gcc g++ clang-format make git
+    - apt-get install -y cmake gcc g++ clang-format make git
     - echo -e "\e[0Ksection_end:`date +%s`:reqs\r\e[0K"
   script:
     - echo -e "\e[0Ksection_start:`date +%s`:build[collapsed=true]\r\e[0KBuild"

@@ -4,16 +4,32 @@ project(sdm)
 
 set(CMAKE_CXX_STANDARD 11)
 
-#set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-# set(CMAKE_UNITY_BUILD FALSE)
+set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries")
+set(ENABLE_CRYPTO OFF CACHE INTERNAL "Enable Crypto")
+set(ENABLE_XML OFF CACHE INTERNAL "Enable XML")
+set(ENABLE_MONGODB OFF CACHE INTERNAL "Enable MongoDB")
+set(ENABLE_CRYPTO OFF CACHE INTERNAL "Enable Crypto")
+set(ENABLE_NETSSL OFF CACHE INTERNAL "Enable NetSSL")
+set(ENABLE_JWT OFF CACHE INTERNAL "Enable JWT")
+set(ENABLE_ZIP OFF CACHE INTERNAL "Enable ZIP")
+set(ENABLE_PAGECOMPILER OFF CACHE INTERNAL "Enable PageCompiler")
+set(ENABLE_PAGECOMPILER_FILE2PAGE OFF CACHE INTERNAL "Enable File2Page")
+set(ENABLE_ACTIVERECORD OFF CACHE INTERNAL "Enable ActiveRecord")
+set(ENABLE_ACTIVERECORD_COMPILER OFF CACHE INTERNAL "Enable ActiveRecord Compiler")
+set(ENABLE_DATA OFF CACHE INTERNAL "Enable Data")
+set(ENABLE_DATA_MYSQL OFF CACHE INTERNAL "Enable MariaDB")
+set(ENABLE_DATA_SQLITE OFF CACHE INTERNAL "Enable Data SQlite")
+set(ENABLE_DATA_ODBC  OFF CACHE INTERNAL "Enable Data ODBC")
+set(ENABLE_ENCODINGS OFF CACHE INTERNAL "Enable Encodings")
+include(FetchContent)
 
-find_package(Poco QUIET COMPONENTS Net Util Redis)
+FetchContent_Declare(Poco
+  GIT_REPOSITORY    https://github.com/pocoproject/poco.git
+  GIT_TAG           poco-1.11.6-release
+  GIT_SHALLOW       TRUE
+)
 
-if(NOT Poco_FOUND)
-	message(INFO "Poco secondary autodetection.")
-	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-	find_package(Poco QUIET REQUIRED COMPONENTS Net Util Redis)
-endif()
+FetchContent_MakeAvailable(Poco)
 
 find_program(FORMATER clang-format)
 
@@ -23,8 +39,9 @@ if(FORMATER)
 else()
 	message("-- clang-format not found - Formatting skipped")
 endif()
+
 aux_source_directory(src SRC_FILES)
 add_executable(sdm ${SRC_FILES})
-target_link_libraries(sdm Poco::Util Poco::Net Poco::Redis p2p)
+target_link_libraries(sdm Poco::Util Poco::Net Poco::Redis)
 
 add_subdirectory(PeerToPeer)
