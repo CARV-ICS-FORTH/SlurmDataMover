@@ -165,24 +165,29 @@ void Redis::requestFiles(std::vector<std::string> files, uint16_t port) {
   }
 }
 
-bool Redis::getRequest() {
-  Array get;
-  get << "XREAD"
-      << "COUNT"
-      << "1"
-      << "BLOCK"
-      << "0"
-      << "STREAMS"
-      << "request"
-      << "$";
-  RedisType::Ptr ret = client.sendCommand(get);
-  if (ret) {
-    if (!ret->isArray())
-      return false;
-    Array *arr = (Array *)ret.get();
-    std::cerr << arr->toString();
+bool Redis::getRequest(std::string &file, std::string &host, uint16_t &port) {
+  try {
+    Array get;
+    get << "XREAD"
+        << "COUNT"
+        << "1"
+        << "BLOCK"
+        << "100"
+        << "STREAMS"
+        << "request"
+        << "$";
+    Array ret = client.execute<Array>(get)
+                    .get<Array>(0)
+                    .get<Array>(1)
+                    .get<Array>(0)
+                    .get<Array>(1);
+    host = ret.get<BulkString>(1).value();
+    port = std::atoi(ret.get<BulkString>(3).value().c_str());
+    file = ret.get<BulkString>(5).value();
+    return true;
+  } catch (Poco::Exception &e) {
+    return false;
   }
-  return ret;
 }
 
 bool Redis::add(const JSONable &obj) {

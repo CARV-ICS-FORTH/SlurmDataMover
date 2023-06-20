@@ -23,12 +23,18 @@ void BulkSender::Transfer::run() {}
 BulkSender::BulkSender(uint16_t port)
     : Poco::Net::TCPServer(
           new Poco::Net::TCPServerConnectionFactoryImpl<Transfer>(), port),
-      Poco::Thread("Bulk") {}
+      Poco::Thread("Bulk"), _stop(false) {}
 
 void BulkSender::run() {
   Log::Info("Bulk", "Ready to send");
-  while (1) {
-    std::cerr << "Request" << (Redis::getRequest() ? "Yep" : "Nop")
-              << std::endl;
+  std::string file;
+  std::string host;
+  uint16_t port;
+  while (!_stop) {
+    if (Redis::getRequest(file, host, port)) {
+      std::cerr << file << " " << host << " " << port << std::endl;
+    }
   }
 }
+
+void BulkSender ::stop() { _stop = true; }

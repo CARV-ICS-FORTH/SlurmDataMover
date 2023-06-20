@@ -27,6 +27,7 @@ FetchContent_Declare(Poco
   GIT_REPOSITORY    https://github.com/pocoproject/poco.git
   GIT_TAG           poco-1.11.6-release
   GIT_SHALLOW       TRUE
+  PATCH_COMMAND     patch -d ${FETCHCONTENT_BASE_DIR}/poco-src --verbose -p 1 -R -i ${CMAKE_SOURCE_DIR}/poco.patch
 )
 
 FetchContent_MakeAvailable(Poco)

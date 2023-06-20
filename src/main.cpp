@@ -36,7 +36,7 @@ std::string build_workdir(std::vector<std::string> files) {
   return temp_folder.path();
 }
 
-void fetch_files(std::vector<std::string> files, uint16_t port) {
+void fetch_files(std::vector<std::string> files) {
   BulkReciever::FileList req_files;
   std::vector<std::string> file_ids;
   for (auto file : files) {
@@ -62,14 +62,14 @@ void fetch_files(std::vector<std::string> files, uint16_t port) {
             "Target for %s at %s not found localy, requesting file from others",
             file, target.path());
         req_files[file] = local_file_name;
-        file_ids.push_back(file);
+        file_ids.push_back(local_file_name);
       }
     }
   }
 
   if (file_ids.size()) {
     BulkReciever br(req_files);
-    Redis::requestFiles(file_ids, port);
+    Redis::requestFiles(file_ids, br.port());
     br.wait();
   }
 }
@@ -194,9 +194,6 @@ class Sdm : public ServerApplication {
                           .callback(OptionCallback<Sdm>(this, &Sdm::addExec)));
 
     ServerApplication::defineOptions(options);
-
-    // Add short daemon option
-    ((Option &)options.getOption("daemon")).shortName("d");
 
     options.addOption(Option("help", "h", "Print Help")
                           .callback(OptionCallback<Sdm>(this, &Sdm::help)));
@@ -327,7 +324,7 @@ class Sdm : public ServerApplication {
         Redis::add(file);
       }
 
-      fetch_files(get_files, bulk_port);
+      fetch_files(get_files);
     }
 
     if (flags.count("exec")) {

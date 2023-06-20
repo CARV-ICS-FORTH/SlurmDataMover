@@ -1,0 +1,13 @@
+diff --git a/Util/src/ServerApplication.cpp b/Util/src/ServerApplication.cpp
+index af373113f..401de6412 100644
+--- a/Util/src/ServerApplication.cpp
++++ b/Util/src/ServerApplication.cpp
+@@ -664,7 +664,7 @@ void ServerApplication::defineOptions(OptionSet& options)
+ 	Application::defineOptions(options);
+ 
+ 	options.addOption(
+-		Option("daemon", "", "Run application as a daemon.")
++		Option("daemon", "d", "Run application as a daemon.")
+ 			.required(false)
+ 			.repeatable(false)
+ 			.callback(OptionCallback<ServerApplication>(this, &ServerApplication::handleDaemon)));

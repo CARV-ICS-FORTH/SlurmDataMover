@@ -25,8 +25,10 @@ class BulkSender : public Poco::Net::TCPServer, public Poco::Thread {
     Transfer(const Poco::Net::StreamSocket &s);
     void run();
   };
+  bool _stop;
 
 public:
   BulkSender(uint16_t port = 0);
   void run();
+  void stop();
 };
