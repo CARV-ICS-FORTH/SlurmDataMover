@@ -37,4 +37,6 @@ void BulkSender::run() {
   }
 }
 
-void BulkSender ::stop() { _stop = true; }
+void BulkSender::stop() { _stop = true; }
+
+BulkSender::~BulkSender() { stop(); }

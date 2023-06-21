@@ -26,6 +26,7 @@ class BulkSender : public Poco::Net::TCPServer, public Poco::Thread {
     void run();
   };
   bool _stop;
+  virtual ~BulkSender();
 
 public:
   BulkSender(uint16_t port = 0);
