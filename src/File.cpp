@@ -1,6 +1,8 @@
 #include "File.h"
+#include "Poco/File.h"
 #include "Poco/JSON/Object.h"
 #include "Poco/JSON/Parser.h"
+#include "Poco/Path.h"
 
 using Poco::JSON::Array;
 using Poco::JSON::Object;
@@ -51,6 +53,19 @@ void File ::fromJSON(const std::string &json) {
 }
 bool operator==(const File &lhs, const File &rhs) {
   return lhs.file_name == rhs.file_name;
+}
+
+std::string File::Locate(std::string file) {
+  for (auto mount : Node::getLocalhostNode().mounts) {
+    std::string f;
+    std::string p;
+    Node::getLocalhostNode().parseMountPath(file + "@" + mount.first, f, p);
+    Poco::Path path(f, p);
+    Poco::File fp(path);
+    if (fp.isFile())
+      return path.toString();
+  }
+  return "";
 }
 
 const File File::NotFound("NotFound");

@@ -32,6 +32,7 @@ void Log ::Error(std::string scope, std::string msg) {
 }
 
 int executeProgram(std::string program, std::string cwd) {
+  Log::Info("Exec", "Execution Started");
   std::vector<std::string> args;
 
   Poco::StringTokenizer stk(program, " ");
@@ -43,5 +44,9 @@ int executeProgram(std::string program, std::string cwd) {
     else
       args.push_back(tok);
 
-  return Poco::Process::launch(*stk.begin(), args, cwd).wait();
+  int ret = Poco::Process::launch(*stk.begin(), args, cwd).wait();
+
+  Log::Info("Exec", "Execution Finished (return code %d)", ret);
+
+  return ret;
 }

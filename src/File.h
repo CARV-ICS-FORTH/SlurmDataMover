@@ -18,6 +18,8 @@ struct File : public JSONable {
 
   IMPLEMENTS_JSONable;
 
+  static std::string Locate(std::string name);
+
   static const File NotFound;
 };
 

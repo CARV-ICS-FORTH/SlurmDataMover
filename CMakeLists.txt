@@ -27,7 +27,6 @@ FetchContent_Declare(Poco
   GIT_REPOSITORY    https://github.com/pocoproject/poco.git
   GIT_TAG           poco-1.11.6-release
   GIT_SHALLOW       TRUE
-  PATCH_COMMAND     patch -d ${FETCHCONTENT_BASE_DIR}/poco-src --verbose -p 1 -R -i ${CMAKE_SOURCE_DIR}/poco.patch
 )
 
 FetchContent_MakeAvailable(Poco)
@@ -44,5 +43,3 @@ endif()
 aux_source_directory(src SRC_FILES)
 add_executable(sdm ${SRC_FILES})
 target_link_libraries(sdm Poco::Util Poco::Net Poco::Redis)
-
-add_subdirectory(PeerToPeer)

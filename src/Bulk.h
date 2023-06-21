@@ -16,8 +16,6 @@ public:
   void wait();
 
 private:
-  FileList files;
-  Poco::Event e;
 };
 
 class BulkSender : public Poco::Net::TCPServer, public Poco::Thread {

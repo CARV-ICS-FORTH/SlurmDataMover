@@ -14,9 +14,10 @@
 using namespace Poco::Net;
 using namespace Poco::Util;
 
-std::string build_workdir(std::vector<std::string> files) {
+std::string build_workdir(std::vector<std::string> files, bool keep = true) {
   Poco::TemporaryFile temp_folder;
-  temp_folder.keep();
+  if (keep)
+    temp_folder.keep();
   temp_folder.createDirectory();
   Log::Info("Env", "Work folder %s", temp_folder.path());
   for (auto file : files) {
@@ -61,7 +62,7 @@ void fetch_files(std::vector<std::string> files) {
             "Env",
             "Target for %s at %s not found localy, requesting file from others",
             file, target.path());
-        req_files[file] = local_file_name;
+        req_files[local_file_name] = target.path();
         file_ids.push_back(local_file_name);
       }
     }
@@ -238,6 +239,7 @@ class Sdm : public ServerApplication {
   }
 
   int main(const std::vector<std::string> &) {
+    int return_code = Application::EXIT_OK;
     uint16_t wui_port = getPort("wui_port");
     std::map<std::string, TCPServer *> servers;
 
@@ -330,7 +332,7 @@ class Sdm : public ServerApplication {
     if (flags.count("exec")) {
       std::string cwd = build_workdir(all_files);
 
-      executeProgram(exec, cwd);
+      return_code = executeProgram(exec, cwd);
     }
 
     if (wui_port || flags.count("serve")) {

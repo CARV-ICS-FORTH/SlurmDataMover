@@ -32,6 +32,8 @@ struct Node : public JSONable {
 
   std::string normalizeMountPath(std::string mount_path);
 
+  std::string locateFile(std::string file);
+
   operator bool() const;
 
   IMPLEMENTS_JSONable;
