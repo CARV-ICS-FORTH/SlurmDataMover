@@ -12,8 +12,7 @@ Timeit ::Timeit(const std::string &msg) : msg(msg) {}
 
 Timeit ::~Timeit() {
   Poco::Timestamp now;
-  Log::Info("Time", "%s [%ld,%ld,%ld]", msg, start - boot, now - start,
-            now - boot);
+  Log::Info("Time", "%s [%ld,%ld]", msg, start.raw() / 1000, now.raw() / 1000);
 }
 
 const Poco::Timestamp Timeit::boot;

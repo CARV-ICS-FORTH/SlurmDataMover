@@ -26,5 +26,5 @@ help:
 	@echo "exec   : Execute bash in slurm master"
 	@echo "create : Create images"
 	@echo "stop   : Stop containers"
-	@echo "clear  : Delete containers"
+	@echo "clean  : Delete containers"
 	@echo "deps   : Install dependencies(inside docker)"

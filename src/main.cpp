@@ -1,6 +1,5 @@
 #include "Bulk.h"
 #include "Log.h"
-#include "Poco/Environment.h"
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/SocketStream.h"
 #include "Poco/Path.h"
@@ -54,6 +53,7 @@ void fetch_files(std::vector<std::string> files) {
       Log::Info("Env", "Target for %s at %s must be fetched", file,
                 target.path());
       if (local_file.exists()) {
+        Timeit _t("Local copy " + std::string(file) + " at " + target.path());
         Log::Info("Env", "Target for %s at %s copied from %s", file,
                   target.path(),
                   Poco::Path(local_file.path()).absolute().toString());
@@ -113,7 +113,7 @@ class Sdm : public ServerApplication {
     }
 
     std::cerr << std::endl;
-    std::cerr << "You must pass at least one of Get,Put or Serve.";
+    std::cerr << "You must pass at least one of Get,Put,Serve or Wui.";
     std::cerr << std::endl;
 
     exit(0);
@@ -251,7 +251,7 @@ class Sdm : public ServerApplication {
 
     uint16_t bulk_port = getPort("bulk_port");
 
-    if (flags.size() == 0) {
+    if (flags.size() == 0 && !wui_port) {
       help();
       return Application::EXIT_USAGE;
     }
@@ -269,36 +269,26 @@ class Sdm : public ServerApplication {
     if (flags.count("serve")) {
       Redis::add(localhost);
 
-      for (auto mount : localhost.mounts)
-        Log::Info("Node", "Added mount '%s' at '%s'", mount.first,
-                  mount.second);
+      for (auto mount : localhost.mounts) {
+        Poco::File mount_dir(mount.second);
+        bool exists = mount_dir.exists();
+
+        Log::Info("Node", "%s mount '%s' at '%s'",
+                  std::string(exists ? "Added existing" : "Created"),
+                  mount.first, mount.second);
+
+        if (!mount_dir.exists()) {
+          Log::Info("Node", "Mount %s at %s did not exist, creating",
+                    mount.first, mount.second);
+          mount_dir.createDirectories();
+        }
+      }
 
       servers["Bulk"] = new BulkSender(bulk_port);
       bulk_port = servers["Bulk"]->port();
-
-      if (Poco::Environment::has("SLURM_JOB_NODELIST")) {
-        std::string node_env = Poco::Environment::get("SLURM_JOB_NODELIST");
-        node_env = node_env.substr(0, node_env.find_first_of(","));
-        std::string head;
-        bool after_cage = false;
-        for (auto c : node_env)
-          switch (c) {
-          case '[':
-            after_cage = true;
-            break;
-          case '-':
-            if (after_cage)
-              goto done;
-          default:
-            head += c;
-          }
-
-      done:
-        Log::Info("Node", "Node from enviroment %s", head);
-      }
     } else {
-      if (!put_files.size() && !get_files.size()) {
-        help("", "");
+      if (!put_files.size() && !get_files.size() && !wui_port) {
+        help();
         return Application::EXIT_USAGE;
       }
     }

@@ -128,11 +128,11 @@ void Node ::fromJSON(const std::string &json) {
 const Node Node::NotFound("NodeNotFound");
 
 void Node ::toHTML(std::ostream &os) const {
-  Tag row(os, "tr");
+  Tag row(os, "tr style='border-left: 5px solid green;'");
   {
     {
       Tag cell2(os, "td");
-      Tag span(os, "span class='span is-small bg-error'", "Offline");
+      Tag span(os, "span class='span is-small bg-info'", "Online");
     }
     Tag cell(os, "td", name);
   }

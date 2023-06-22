@@ -20,7 +20,7 @@ void BulkReciever::Transfer::run() {
   sock.receiveBytes(file, fname_s);
 
   std::string target = recv_files.at(file);
-  Log::Info("Bulk", "Recieve " + std::string(file) + " at " + target);
+  Timeit _t("Recieve " + std::string(file) + " at " + target);
 
   Poco::FileOutputStream ostr(target, std::ios::binary);
   Poco::StreamCopier::copyStream(istr, ostr);
@@ -62,7 +62,8 @@ void BulkSender::run() {
   while (!_stop) {
     if (Redis::getRequest(file, host, port)) {
       std::string location = File::Locate(file);
-      Log::Info("Bulk", "Request for %s from %s:%hu", file, host, port);
+      Log::Info("Bulk", "Request for %s from %s:%hu (located: %s)", file, host,
+                port, location);
       if (location != "") {
         Log::Info("Bulk", "Send %s to %s:%hu from %s", file, host, port,
                   location);

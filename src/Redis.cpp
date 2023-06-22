@@ -1,5 +1,7 @@
 #include "Redis.h"
+#include "Log.h"
 #include "Poco/Exception.h"
+#include "Poco/Net/NetException.h"
 #include "Poco/Redis/Array.h"
 #include "Poco/Redis/Client.h"
 #include "Poco/Redis/Command.h"
@@ -17,25 +19,31 @@ class RedisConnector {
   Poco::ThreadLocal<Client> client;
 
 public:
-  Poco::Net::SocketAddress sock_addr;
+  std::vector<Poco::Net::SocketAddress> sock_addr = {
+      Poco::Net::SocketAddress("redis", 6379)};
   Client *operator->() {
     auto &con = client.get();
     if (!con.isConnected()) {
-      con.connect(sock_addr);
+      for (auto itr = sock_addr.rbegin(); itr != sock_addr.rend(); itr++) {
+        auto &redis_sa = *itr;
+        try {
+          con.connect(redis_sa);
+          Log::Info("Redi", "Connected to %s", redis_sa.toString());
+          break;
+        } catch (Poco::Exception &e) {
+          std::cerr << "Redis::connect(" << redis_sa.host() << ":"
+                    << redis_sa.port() << "): " << e.displayText() << std::endl;
+        }
+      }
     }
+    if (!con.isConnected())
+      throw Poco::Net::NetException("Could not connect to Redis");
     return &con;
   }
 } con;
 
 void Redis ::connect(Poco::Net::SocketAddress &sock_addr) {
-  try {
-    con.sock_addr = sock_addr;
-    con->isConnected();
-  } catch (Poco::Exception &e) {
-    std::cerr << "In Redis::connect(" << sock_addr.host() << ":"
-              << sock_addr.port() << "): " << e.displayText() << std::endl;
-    throw e;
-  }
+  con.sock_addr.push_back(sock_addr);
 }
 
 bool Redis ::pingRedis() {
@@ -241,10 +249,11 @@ void Redis::addLog(const JSONable &obj) {
 }
 
 std::vector<std::string> Redis::getLastLogs(int count) {
-  Array cmd;
-  cmd << "LRANGE"
-      << "log" << std::to_string(-(count + 1)) << "-1";
-  Array ret = con->execute<Array>(cmd);
+  Command llen = Command::llen("log");
+  Poco::Int64 len = con->execute<Poco::Int64>(llen);
+
+  Command range = Command::lrange("log", len - count, len);
+  Array ret = con->execute<Array>(range);
 
   std::vector<std::string> result;
 

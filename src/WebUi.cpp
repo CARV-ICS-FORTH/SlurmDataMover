@@ -13,11 +13,11 @@ using namespace Poco::Net;
 class WebUiHandler : public HTTPRequestHandler {
   template <class T, class Cont>
   void writeTable(std::ostream &os, const Cont &data,
-                  void (T::*fn)(std::ostream &os) const,
+                  void (T::*fn)(std::ostream &os) const, int cols,
                   std::vector<const char *> headers) {
     if (!data.size())
       return;
-    Tag tag(os, "div class='card col-5'");
+    Tag tag(os, "div class='card col-" + std::to_string(cols) + "'");
     {
       Tag table(os, "table class='striped'");
       {
@@ -47,9 +47,9 @@ class WebUiHandler : public HTTPRequestHandler {
       Tag col1(os, "div class='row is-marginless'");
       { Tag col1(os, "div class='col-1'"); }
       {
-        writeTable(os, Redis::getAllNodes(), &Node::toHTML,
+        writeTable(os, Redis::getAllNodes(), &Node::toHTML, 5,
                    {"Status", "Hostname", "Mounts", "Addresses"});
-        writeTable(os, Redis::getAllFiles(), &File::toHTML,
+        writeTable(os, Redis::getAllFiles(), &File::toHTML, 5,
                    {"File", "Location", "Size", "Nodes"});
       }
     }
@@ -57,7 +57,7 @@ class WebUiHandler : public HTTPRequestHandler {
       Tag col1(os, "div class='row is-marginless'");
       { Tag col1(os, "div class='col-1'"); }
       {
-        writeTable(os, Log::getLastEntries(), &Log::Entry::toHTML,
+        writeTable(os, Log::getLastEntries(), &Log::Entry::toHTML, 10,
                    {"Host", "Type", "Scope", "Message"});
       }
     }
@@ -90,7 +90,7 @@ class WebUiHandler : public HTTPRequestHandler {
             "function update() {fetch(new Request('/update')).then((response) "
             "=> response.blob()).then((blob) => blob.text()).then( (raw) => "
             "{\nbody = document.getElementsByTagName('body')[0];\n "
-            "body.innerHTML=raw;\n})}\nsetInterval(update,200)");
+            "body.innerHTML=raw;\n})}\nsetInterval(update,500)");
       }
     } else {
       body(oss); // Update only sends body

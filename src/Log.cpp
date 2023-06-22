@@ -11,9 +11,10 @@ Poco::Logger *Log ::logger = 0;
 
 void Log ::setLoggger(Poco::Logger &logger) { Log::logger = &logger; }
 
-std::string sco_str(std::string scope, std::string level) {
+std::string sco_str(std::string host, std::string scope, std::string level) {
   std::stringstream ss;
   ss << "[";
+  ss << host << "][";
   ss.width(4);
   ss << scope << "] -";
   ss.width(6);
@@ -22,18 +23,21 @@ std::string sco_str(std::string scope, std::string level) {
 }
 
 void Log ::Info(std::string scope, std::string msg) {
-  Log::logger->information(sco_str(scope, __func__) + msg);
-  Redis::addLog(Entry(scope, __func__, Node::getHostname(), msg));
+  std::string host = Node::getHostname();
+  Log::logger->information(sco_str(host, scope, __func__) + msg);
+  Redis::addLog(Entry(scope, __func__, host, msg));
 }
 
 void Log ::Trace(std::string scope, std::string msg) {
-  Log::logger->trace(sco_str(scope, __func__) + msg);
-  Redis::addLog(Entry(scope, __func__, Node::getHostname(), msg));
+  std::string host = Node::getHostname();
+  Log::logger->trace(sco_str(host, scope, __func__) + msg);
+  Redis::addLog(Entry(scope, __func__, host, msg));
 }
 
 void Log ::Error(std::string scope, std::string msg) {
-  Log::logger->error(sco_str(scope, __func__) + msg);
-  Redis::addLog(Entry(scope, __func__, Node::getHostname(), msg));
+  std::string host = Node::getHostname();
+  Log::logger->error(sco_str(host, scope, __func__) + msg);
+  Redis::addLog(Entry(scope, __func__, host, msg));
 }
 
 std::vector<Log::Entry> Log ::getLastEntries(int count) {
