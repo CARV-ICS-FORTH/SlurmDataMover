@@ -1,38 +1,25 @@
 #include "Utils.h"
+#include "Log.h"
 #include "Poco/Process.h"
 #include "Poco/StringTokenizer.h"
 #include <sstream>
 
-std::string Tag ::indentation = "";
+Poco::ThreadLocal<std::string> Tag ::indentation;
 
-Poco::Logger *Log ::logger = 0;
+Timeit ::Timeit(const char *msg) : msg(msg) {}
 
-void Log ::setLoggger(Poco::Logger &logger) { Log::logger = &logger; }
+Timeit ::Timeit(const std::string &msg) : msg(msg) {}
 
-std::string sco_str(std::string scope, std::string level) {
-  std::stringstream ss;
-  ss << "[";
-  ss.width(4);
-  ss << scope << "] -";
-  ss.width(6);
-  ss << level << " :: ";
-  return ss.str();
+Timeit ::~Timeit() {
+  Poco::Timestamp now;
+  Log::Info("Time", "%s [%ld,%ld,%ld]", msg, start - boot, now - start,
+            now - boot);
 }
 
-void Log ::Info(std::string scope, std::string msg) {
-  Log::logger->information(sco_str(scope, __func__) + msg);
-}
-
-void Log ::Trace(std::string scope, std::string msg) {
-  Log::logger->trace(sco_str(scope, __func__) + msg);
-}
-
-void Log ::Error(std::string scope, std::string msg) {
-  Log::logger->error(sco_str(scope, __func__) + msg);
-}
+const Poco::Timestamp Timeit::boot;
 
 int executeProgram(std::string program, std::string cwd) {
-  Log::Info("Exec", "Execution Started");
+  Timeit _t("Execute " + program + " at " + cwd);
   std::vector<std::string> args;
 
   Poco::StringTokenizer stk(program, " ");
@@ -45,8 +32,6 @@ int executeProgram(std::string program, std::string cwd) {
       args.push_back(tok);
 
   int ret = Poco::Process::launch(*stk.begin(), args, cwd).wait();
-
-  Log::Info("Exec", "Execution Finished (return code %d)", ret);
 
   return ret;
 }

@@ -4,6 +4,7 @@
 #include "Poco/Redis/Client.h"
 #include "Poco/Redis/Command.h"
 #include "Poco/Redis/Type.h"
+#include "Poco/ThreadLocal.h"
 
 using Poco::Redis::Array;
 using Poco::Redis::BulkString;
@@ -12,11 +13,24 @@ using Poco::Redis::Command;
 using Poco::Redis::RedisType;
 using Poco::Redis::Type;
 
-Client client;
+class RedisConnector {
+  Poco::ThreadLocal<Client> client;
+
+public:
+  Poco::Net::SocketAddress sock_addr;
+  Client *operator->() {
+    auto &con = client.get();
+    if (!con.isConnected()) {
+      con.connect(sock_addr);
+    }
+    return &con;
+  }
+} con;
 
 void Redis ::connect(Poco::Net::SocketAddress &sock_addr) {
   try {
-    client.connect(sock_addr);
+    con.sock_addr = sock_addr;
+    con->isConnected();
   } catch (Poco::Exception &e) {
     std::cerr << "In Redis::connect(" << sock_addr.host() << ":"
               << sock_addr.port() << "): " << e.displayText() << std::endl;
@@ -27,7 +41,7 @@ void Redis ::connect(Poco::Net::SocketAddress &sock_addr) {
 bool Redis ::pingRedis() {
   Command ping = Command::ping();
 
-  std::string ret = client.execute<std::string>(ping);
+  std::string ret = con->execute<std::string>(ping);
 
   return ret == "PONG";
 }
@@ -47,7 +61,7 @@ Node::Nodes Redis ::getAllNodes() {
       scan << "SCAN" << currsor << "match"
            << "node:*";
 
-      Array response = client.execute<Array>(scan);
+      Array response = con->execute<Array>(scan);
 
       currsor = std::to_string(response.get<BulkString>(0));
 
@@ -69,7 +83,7 @@ Node::Nodes Redis ::getAllNodes() {
       for (auto &nk : node_keys)
         mget << nk;
 
-      Array results = client.execute<Array>(mget);
+      Array results = con->execute<Array>(mget);
 
       if (!results.isNull()) {
         for (auto result : results) {
@@ -97,7 +111,7 @@ File::Files Redis ::getAllFiles() {
       scan << "SCAN" << currsor << "match"
            << "file:*";
 
-      Array response = client.execute<Array>(scan);
+      Array response = con->execute<Array>(scan);
 
       currsor = std::to_string(response.get<BulkString>(0));
 
@@ -120,7 +134,7 @@ File::Files Redis ::getAllFiles() {
         for (auto &nk : file_keys)
           mget << nk;
 
-        Array results = client.execute<Array>(mget);
+        Array results = con->execute<Array>(mget);
 
         if (!results.isNull()) {
           for (auto result : results) {
@@ -142,7 +156,7 @@ File Redis::getFile(std::string name) {
   Array get;
   get << "GET"
       << "file:" + name;
-  BulkString response = client.execute<BulkString>(get);
+  BulkString response = con->execute<BulkString>(get);
 
   if (response.isNull())
     return File::NotFound;
@@ -161,7 +175,7 @@ void Redis::requestFiles(std::vector<std::string> files, uint16_t port) {
         << "request"
         << "*"
         << "host" << Node::getHostname() << "port" << sport << "file" << file;
-    client.execute<BulkString>(get);
+    con->execute<BulkString>(get);
   }
 }
 
@@ -176,7 +190,7 @@ bool Redis::getRequest(std::string &file, std::string &host, uint16_t &port) {
         << "STREAMS"
         << "request"
         << "$";
-    Array ret = client.execute<Array>(get)
+    Array ret = con->execute<Array>(get)
                     .get<Array>(0)
                     .get<Array>(1)
                     .get<Array>(0)
@@ -195,7 +209,7 @@ bool Redis::add(const JSONable &obj) {
     Array cmd;
     cmd << "SET" << obj.getKey() << obj.toJSON();
 
-    std::string ret = client.execute<std::string>(cmd);
+    std::string ret = con->execute<std::string>(cmd);
   } catch (Poco::Exception &e) {
     std::cerr << "In Redis::add: " << e.displayText();
   }
@@ -207,11 +221,35 @@ bool Redis::get(JSONable &obj) {
     Array cmd;
     cmd << "GET" << obj.getKey();
 
-    std::string ret = client.execute<BulkString>(cmd);
+    std::string ret = con->execute<BulkString>(cmd);
 
     obj.fromJSON(ret);
   } catch (Poco::Exception &e) {
     std::cerr << "In Redis::get: " << e.displayText();
   }
   return true;
+}
+
+void Redis::addLog(const JSONable &obj) {
+  try {
+    Array cmd;
+    cmd << "LPUSH" << obj.getKey() << obj.toJSON();
+    int64_t ret = con->execute<int64_t>(cmd);
+  } catch (Poco::Exception &e) {
+    std::cerr << "In Redis::addLog: " << e.displayText();
+  }
+}
+
+std::vector<std::string> Redis::getLastLogs(int count) {
+  Array cmd;
+  cmd << "LRANGE"
+      << "log" << std::to_string(-(count + 1)) << "-1";
+  Array ret = con->execute<Array>(cmd);
+
+  std::vector<std::string> result;
+
+  for (auto &elem : ret)
+    result.push_back(getRaw<BulkString>(elem));
+
+  return result;
 }

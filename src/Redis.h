@@ -27,4 +27,9 @@ bool getRequest(std::string &file, std::string &host, uint16_t &port);
 bool add(const JSONable &node);
 
 bool get(JSONable &node);
+
+void addLog(const JSONable &obj);
+
+std::vector<std::string> getLastLogs(int count);
+
 }; // namespace Redis

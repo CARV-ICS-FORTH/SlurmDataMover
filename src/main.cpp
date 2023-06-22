@@ -1,4 +1,5 @@
 #include "Bulk.h"
+#include "Log.h"
 #include "Poco/Environment.h"
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/SocketStream.h"
@@ -17,7 +18,7 @@ using namespace Poco::Util;
 std::string build_workdir(std::vector<std::string> files, bool keep = true) {
   Poco::TemporaryFile temp_folder;
   if (keep)
-    temp_folder.keep();
+    temp_folder.keepUntilExit();
   temp_folder.createDirectory();
   Log::Info("Env", "Work folder %s", temp_folder.path());
   for (auto file : files) {
@@ -141,7 +142,6 @@ class Sdm : public ServerApplication {
       help();
 
     localhost.mounts[mname] = mpath;
-    Log::Info("Node", "Added mount '%s' at '%s'", mname, mpath);
   }
 
   void setFlag(const std::string &name, const std::string &value) {
@@ -153,7 +153,6 @@ class Sdm : public ServerApplication {
   }
 
   void addExec(const std::string &name, const std::string &cmd) {
-    Log::Info("Node", "Added exec command '%s'", cmd);
     flags.insert(name);
     exec = cmd;
   }
@@ -248,6 +247,8 @@ class Sdm : public ServerApplication {
       return Application::EXIT_USAGE;
     }
 
+    Redis::connect(redis_sa);
+
     uint16_t bulk_port = getPort("bulk_port");
 
     if (flags.size() == 0) {
@@ -260,8 +261,6 @@ class Sdm : public ServerApplication {
       Log::Info("Init", "Running as a daemon");
     }
 
-    Redis::connect(redis_sa);
-
     bool ping = Redis::pingRedis();
 
     Log::Info("Main", "Redis ping %s ",
@@ -269,6 +268,10 @@ class Sdm : public ServerApplication {
 
     if (flags.count("serve")) {
       Redis::add(localhost);
+
+      for (auto mount : localhost.mounts)
+        Log::Info("Node", "Added mount '%s' at '%s'", mount.first,
+                  mount.second);
 
       servers["Bulk"] = new BulkSender(bulk_port);
       bulk_port = servers["Bulk"]->port();

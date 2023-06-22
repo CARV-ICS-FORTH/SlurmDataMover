@@ -62,7 +62,7 @@ std::string File::Locate(std::string file) {
     Node::getLocalhostNode().parseMountPath(file + "@" + mount.first, f, p);
     Poco::Path path(f, p);
     Poco::File fp(path);
-    if (fp.isFile())
+    if (fp.exists())
       return path.toString();
   }
   return "";

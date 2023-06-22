@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "File.h"
+#include "Log.h"
 #include "Node.h"
 #include "Redis.h"
 #include "Utils.h"
@@ -10,8 +11,8 @@
 using namespace Poco::Net;
 
 class WebUiHandler : public HTTPRequestHandler {
-  template <class T>
-  void writeTable(std::ostream &os, const std::unordered_set<T> &data,
+  template <class T, class Cont>
+  void writeTable(std::ostream &os, const Cont &data,
                   void (T::*fn)(std::ostream &os) const,
                   std::vector<const char *> headers) {
     if (!data.size())
@@ -42,13 +43,23 @@ class WebUiHandler : public HTTPRequestHandler {
       Tag a(os, "a class='brand'",
             "SLURM Data Manager @ " + Node::getHostname());
     }
-    Tag col1(os, "div class='row is-marginless'");
-    { Tag col1(os, "div class='col-1'"); }
     {
-      writeTable(os, Redis::getAllNodes(), &Node::toHTML,
-                 {"Status", "Hostname", "Mounts", "Addresses"});
-      writeTable(os, Redis::getAllFiles(), &File::toHTML,
-                 {"File", "Location", "Size", "Nodes"});
+      Tag col1(os, "div class='row is-marginless'");
+      { Tag col1(os, "div class='col-1'"); }
+      {
+        writeTable(os, Redis::getAllNodes(), &Node::toHTML,
+                   {"Status", "Hostname", "Mounts", "Addresses"});
+        writeTable(os, Redis::getAllFiles(), &File::toHTML,
+                   {"File", "Location", "Size", "Nodes"});
+      }
+    }
+    {
+      Tag col1(os, "div class='row is-marginless'");
+      { Tag col1(os, "div class='col-1'"); }
+      {
+        writeTable(os, Log::getLastEntries(), &Log::Entry::toHTML,
+                   {"Host", "Type", "Scope", "Message"});
+      }
     }
   }
 
