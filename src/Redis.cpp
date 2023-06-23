@@ -188,7 +188,8 @@ void Redis::requestFiles(std::vector<std::string> files, uint16_t port) {
   }
 }
 
-bool Redis::getRequest(std::string &file, std::string &host, uint16_t &port) {
+bool Redis::getRequest(std::string &cursor, std::string &file,
+                       std::string &host, uint16_t &port) {
   try {
     Array get;
     get << "XREAD"
@@ -197,8 +198,16 @@ bool Redis::getRequest(std::string &file, std::string &host, uint16_t &port) {
         << "BLOCK"
         << "100"
         << "STREAMS"
-        << "request"
-        << "$";
+        << "request" << cursor;
+    cursor = con->execute<Array>(get)
+                 .get<Array>(0)
+                 .get<Array>(1)
+                 .get<Array>(0)
+                 .get<BulkString>(0)
+                 .value();
+
+    std::cerr << "Cursor:" << cursor;
+
     Array ret = con->execute<Array>(get)
                     .get<Array>(0)
                     .get<Array>(1)
@@ -250,10 +259,7 @@ void Redis::addLog(const JSONable &obj) {
 }
 
 std::vector<std::string> Redis::getLastLogs(int count) {
-  Command llen = Command::llen("log");
-  Poco::Int64 len = con->execute<Poco::Int64>(llen);
-
-  Command range = Command::lrange("log", len - count, len);
+  Command range = Command::lrange("log", 0, count);
   Array ret = con->execute<Array>(range);
 
   std::vector<std::string> result;

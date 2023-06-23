@@ -59,8 +59,9 @@ void BulkSender::run() {
   std::string file;
   std::string host;
   uint16_t port;
+  std::string cursor = "$";
   while (!_stop) {
-    if (Redis::getRequest(file, host, port)) {
+    if (Redis::getRequest(cursor, file, host, port)) {
       std::string location = File::Locate(file);
       Log::Info("Bulk", "Request for %s from %s:%hu (located: %s)", file, host,
                 port, location);
