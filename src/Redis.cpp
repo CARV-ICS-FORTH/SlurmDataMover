@@ -19,20 +19,21 @@ class RedisConnector {
   Poco::ThreadLocal<Client> client;
 
 public:
-  std::vector<Poco::Net::SocketAddress> sock_addr = {
-      Poco::Net::SocketAddress("redis", 6379)};
+  std::set<std::pair<std::string, uint16_t>> sock_addr = {
+      std::make_pair<std::string, uint16_t>("redis", 6379)};
   Client *operator->() {
     auto &con = client.get();
     if (!con.isConnected()) {
       for (auto itr = sock_addr.rbegin(); itr != sock_addr.rend(); itr++) {
-        auto &redis_sa = *itr;
+        auto &hnp = *itr;
         try {
-          con.connect(redis_sa);
-          Log::Info("Redi", "Connected to %s", redis_sa.toString());
+          Poco::Net::SocketAddress sa(hnp.first, hnp.second);
+          con.connect(sa);
+          Log::Info("Redi", "Connected to %s", sa.toString());
           break;
         } catch (Poco::Exception &e) {
-          std::cerr << "Redis::connect(" << redis_sa.host() << ":"
-                    << redis_sa.port() << "): " << e.displayText() << std::endl;
+          std::cerr << "Redis::connect(" << hnp.first << ":" << hnp.second
+                    << "): " << e.displayText() << std::endl;
         }
       }
     }
@@ -42,8 +43,8 @@ public:
   }
 } con;
 
-void Redis ::connect(Poco::Net::SocketAddress &sock_addr) {
-  con.sock_addr.push_back(sock_addr);
+void Redis ::connect(const std::string &host, uint16_t port) {
+  con.sock_addr.insert(std::make_pair(host, port));
 }
 
 bool Redis ::pingRedis() {

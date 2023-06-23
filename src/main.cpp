@@ -247,7 +247,7 @@ class Sdm : public ServerApplication {
       return Application::EXIT_USAGE;
     }
 
-    Redis::connect(redis_sa);
+    Redis::connect(redis_sa.host().toString(), redis_sa.port());
 
     uint16_t bulk_port = getPort("bulk_port");
 

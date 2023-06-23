@@ -6,7 +6,7 @@
 #include <Poco/Net/SocketAddress.h>
 
 namespace Redis {
-void connect(Poco::Net::SocketAddress &sock_addr);
+void connect(const std::string &host, uint16_t port);
 bool pingRedis();
 Node::Nodes getAllNodes();
 Node getNodeByHostname(std::string hostname);
