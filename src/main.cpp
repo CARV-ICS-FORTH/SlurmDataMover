@@ -9,6 +9,7 @@
 #include "Redis.h"
 #include "Utils.h"
 #include "WebUi.h"
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 using namespace Poco::Net;
@@ -35,6 +36,13 @@ std::string build_workdir(std::vector<std::string> files, bool keep = true) {
   }
 
   return temp_folder.path();
+}
+
+void drop_caches() {
+  executeProgram("sync", "/");
+  std::ofstream ofs("/proc/sys/vm/drop_caches");
+  ofs << "3";
+  ofs.close();
 }
 
 void fetch_files(std::vector<std::string> files) {
@@ -188,6 +196,9 @@ class Sdm : public ServerApplication {
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addMount)));
 
+    options.addOption(Option("nocache", "n", "Drop FS caches before exec")
+                          .callback(OptionCallback<Sdm>(this, &Sdm::setFlag)));
+
     options.addOption(Option("exec", "e", "Command to execute")
                           .argument("command")
                           .repeatable(true)
@@ -309,6 +320,10 @@ class Sdm : public ServerApplication {
 
     if (put_files.size() || get_files.size()) {
       fetch_files(get_files);
+    }
+
+    if (flags.count("nocache")) {
+      drop_caches();
     }
 
     if (flags.count("exec")) {
