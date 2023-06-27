@@ -103,7 +103,7 @@ Node::Nodes Redis ::getAllNodes() {
       }
     }
   } catch (Poco::Exception &e) {
-    std::cerr << "In Redis::getAllNodes: " << e.displayText();
+    std::cerr << "In Redis::getAllNodes: " << e.displayText() << std::endl;
   }
 
   return ret;
@@ -139,8 +139,6 @@ bool Redis::getRequest(std::string &cursor, std::string &file,
                  .get<BulkString>(0)
                  .value();
 
-    std::cerr << "Cursor:" << cursor;
-
     Array ret = con->execute<Array>(get)
                     .get<Array>(0)
                     .get<Array>(1)
@@ -162,7 +160,7 @@ bool Redis::add(const JSONable &obj) {
 
     std::string ret = con->execute<std::string>(cmd);
   } catch (Poco::Exception &e) {
-    std::cerr << "In Redis::add: " << e.displayText();
+    std::cerr << "In Redis::add: " << e.displayText() << std::endl;
   }
   return true;
 }
@@ -176,7 +174,7 @@ bool Redis::get(JSONable &obj) {
 
     obj.fromJSON(ret);
   } catch (Poco::Exception &e) {
-    std::cerr << "In Redis::get: " << e.displayText();
+    std::cerr << "In Redis::get: " << e.displayText() << std::endl;
   }
   return true;
 }
@@ -187,7 +185,7 @@ void Redis::addLog(const JSONable &obj) {
     cmd << "LPUSH" << obj.getKey() << obj.toJSON();
     int64_t ret = con->execute<int64_t>(cmd);
   } catch (Poco::Exception &e) {
-    std::cerr << "In Redis::addLog: " << e.displayText();
+    std::cerr << "In Redis::addLog: " << e.displayText() << std::endl;
   }
 }
 
