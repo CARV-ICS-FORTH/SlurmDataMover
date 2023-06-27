@@ -49,8 +49,6 @@ class WebUiHandler : public HTTPRequestHandler {
       {
         writeTable(os, Redis::getAllNodes(), &Node::toHTML, 5,
                    {"Status", "Hostname", "Mounts", "Addresses"});
-        writeTable(os, Redis::getAllFiles(), &File::toHTML, 5,
-                   {"File", "Location", "Size", "Nodes"});
       }
     }
     {

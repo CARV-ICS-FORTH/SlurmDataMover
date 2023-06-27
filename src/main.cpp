@@ -308,17 +308,6 @@ class Sdm : public ServerApplication {
     }
 
     if (put_files.size() || get_files.size()) {
-      for (auto put : put_files) {
-        File file = Redis::getFile(put);
-        if (file == File::NotFound) {
-          Log::Info("PUT", "New File: %s", put);
-        } else {
-          Log::Info("PUT", "Old File: %s", put);
-        }
-        file = File(put);
-        Redis::add(file);
-      }
-
       fetch_files(get_files);
     }
 

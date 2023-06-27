@@ -1,4 +1,5 @@
 #include "Bulk.h"
+#include "File.h"
 #include "Log.h"
 #include "Poco/FileStream.h"
 #include "Poco/Net/SocketStream.h"

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "File.h"
 #include "JSONable.h"
 #include "Node.h"
 #include <Poco/Net/SocketAddress.h>
@@ -10,9 +9,6 @@ void connect(const std::string &host, uint16_t port);
 bool pingRedis();
 Node::Nodes getAllNodes();
 Node getNodeByHostname(std::string hostname);
-
-File::Files getAllFiles();
-File getFile(std::string name);
 
 /**
  * Place a request for the \c files.

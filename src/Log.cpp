@@ -2,6 +2,7 @@
 #include "Poco/JSON/Object.h"
 #include "Poco/JSON/Parser.h"
 #include "Redis.h"
+#include "Utils.h"
 #include <sstream>
 
 using Poco::JSON::Object;
