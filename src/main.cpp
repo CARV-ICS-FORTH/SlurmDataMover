@@ -101,9 +101,9 @@ class Sdm : public ServerApplication {
     std::cerr << "Usage:" << std::endl;
 
     std::cerr << "  Put file.txt:" << std::endl;
-    std::cerr << "    sdm --put file.txt" << std::endl;
+    std::cerr << "    sdm --produce file.txt" << std::endl;
     std::cerr << "  Get file.txt:" << std::endl;
-    std::cerr << "    sdm --get file.txt" << std::endl;
+    std::cerr << "    sdm --consume file.txt" << std::endl;
     std::cerr << "  Start Node Server:" << std::endl;
     std::cerr << "    sdm --serve" << std::endl;
     std::cerr << std::endl;
@@ -121,7 +121,7 @@ class Sdm : public ServerApplication {
     }
 
     std::cerr << std::endl;
-    std::cerr << "You must pass at least one of Get,Put,Serve or Wui.";
+    std::cerr << "You must pass at least one of Consume,Produce,Serve or Wui.";
     std::cerr << std::endl;
 
     exit(0);
@@ -176,11 +176,11 @@ class Sdm : public ServerApplication {
     options.addOption(Option("wui", "w", "Webui Port")
                           .argument("port", false)
                           .binding("wui_port"));
-    options.addOption(Option("get", "g", "Get file")
+    options.addOption(Option("consume", "c", "Consume input file")
                           .argument("file")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addFile)));
-    options.addOption(Option("put", "p", "Put file")
+    options.addOption(Option("produce", "p", "Produce file")
                           .argument("file")
                           .repeatable(true)
                           .callback(OptionCallback<Sdm>(this, &Sdm::addFile)));
