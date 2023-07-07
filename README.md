@@ -1,7 +1,19 @@
-# Slurm Data Mover
+# Slurm Data Mover (SDM)
 
 A tool for managing data dependencies between jobs on a Workflow.
-This tool is responsible sending data on nodes that are allocated executing a job on Slurm
+This tool is responsible sending data on nodes that are allocated for executing a job via Slurm.
+
+SDM aims to enable users to express data dependencies between phases of their workflows
+by identifying input and output files at the level of jobs. SDM offers users
+directives to implement data staging, i.e. orchestrate the necessary data
+transfers so that the jobs that are part of a workflow will find their
+required datasets in-place once they are scheduled for execution.
+In this manner, Slurm becomes more aware of workflows and is able to
+effectively utilize node-local storage resources.
+The expected benefits are derived from reduction of storage I/O load, and
+potential contention, to the underlying shared parallel filesystems, leading
+to improved job and workflow runtimes for jobs and workflows,
+while reducing potential performance interference.
 
 # Requirements
 
